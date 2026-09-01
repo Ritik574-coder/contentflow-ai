@@ -36,6 +36,11 @@ export async function processContent(rawText, opts = {}) {
     try {
       const result = await generator(String(rawText ?? ''), opts);
       if (result && result.ok && result.data) {
+        const body = String(result.data.body ?? '').trim();
+        if (!body) {
+          errors.push({ provider: name, error: 'provider returned an empty body' });
+          continue;
+        }
         return { ...result.data, aiProvider: name };
       }
       if (result && result.error) errors.push({ provider: name, error: result.error });
@@ -46,7 +51,12 @@ export async function processContent(rawText, opts = {}) {
 
   // Final fallback — always produces a usable draft.
   const manual = await generateManual(String(rawText ?? ''), opts);
-  return { ...manual, aiProvider: null, fallbackReason: 'all_ai_providers_failed', providerErrors: errors };
+  return {
+    ...manual.data,
+    aiProvider: null,
+    fallbackReason: 'all_ai_providers_failed',
+    providerErrors: errors,
+  };
 }
 
 export { PROVIDERS, DEFAULT_ORDER };
