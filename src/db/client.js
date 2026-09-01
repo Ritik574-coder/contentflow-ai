@@ -83,7 +83,8 @@ class RestDbClient {
 
   async run(sql, params = []) {
     const metaRow = await this._post(sql, params);
-    return { meta: metaRow };
+    // D1 REST wraps write metadata under metaRow.meta; Worker bindings expose it flat.
+    return { meta: metaRow.meta || metaRow };
   }
 }
 
