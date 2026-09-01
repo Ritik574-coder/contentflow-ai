@@ -1,7 +1,9 @@
 # ContentFlow AI — Implementation Progress
 
-**Last updated:** 2026-09-01 (Phase 1 complete)  
-**Status:** Cloudflare D1 + Worker deployed; Telegram + API token + E2E test remain
+**Last updated:** 2026-09-01 (Phase 4 complete)  
+**Source of truth for current status:** `NEXT-AGENT-REPORT.md`
+
+**Status:** ~90% production ready. Full DRY_RUN E2E verified (GitHub Actions → D1 → Telegram → Worker → publish). Real platform publishing awaits owner credentials.
 
 ## Completed
 
@@ -20,6 +22,7 @@
 - [x] Static dashboard (`site/`) with Worker API integration + offline fallback
 - [x] Cloudflare Worker (`worker/`) — Telegram webhook, read API, dashboard approval endpoint
 - [x] Inline keyboard approval flow with toggle / preview / edit / approve / reject
+- [x] Full Telegram review + approval flow verified in production
 
 ### Phase 7–10 — Platform adapters
 - [x] Blogger — publish, comments, metrics unsupported
@@ -41,57 +44,46 @@
 - [x] `cleanup.yml` + `scripts/cleanup.js` for stale jobs
 - [x] 14 automated tests (adapters, integration, idempotency)
 
-### CI/CD
+### CI/CD & infrastructure
 - [x] `test.yml`, `deploy.yml` (Pages + Worker), `process-content.yml`, `publish-content.yml`
-
-## Not yet done (next agent should continue here)
-
-> **Full handoff:** read `NEXT-AGENT-REPORT.md` and `docs/DEPLOYMENT.md` first.
-
-### 1. Production credentials (owner action required)
-
-- [x] Public GitHub repository — https://github.com/Ritik574-coder/contentflow-ai
-- [x] Cloudflare account logged in (`ritik74820@gmail.com`)
-- [x] D1 database created + migrations applied
+- [x] `refresh-tokens.yml` (credential health check), `collect-metrics.yml`, `cleanup.yml`
+- [x] Cloudflare D1 provisioned + migrations applied
 - [x] Worker deployed to `contentflow-ai.ritik574-coder.workers.dev`
-- [x] GitHub secrets: `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID` set
-- [ ] `CF_API_TOKEN` — create in Cloudflare dashboard (see NEXT-AGENT-REPORT.md)
-- [ ] Telegram bot token + chat ID + webhook registration
-- [ ] At least one AI provider key (or confirm `AI_PROVIDER=manual`)
-- [ ] Google OAuth for Blogger (**consent screen = In production**)
-- [ ] LinkedIn Developer app (Share on LinkedIn product)
-- [ ] DEV.to personal API key
-- [ ] `GH_DISPATCH_PAT` for Worker → GitHub workflow dispatch
+- [x] Permanent `CF_API_TOKEN` in GitHub Secrets
+- [x] Telegram bot + webhook configured
+- [x] `GH_DISPATCH_PAT` on Worker
+- [x] Full DRY_RUN E2E verified (process → approve → publish → D1 audit)
 
-### 2. Cloudflare Worker deployment
+## Remaining (owner + next agent)
 
-- [x] Real `database_id` in `wrangler.toml`
-- [x] Migrations applied remotely
-- [x] Worker deployed
-- [x] `TELEGRAM_SECRET_TOKEN` set on Worker
-- [ ] `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `GH_DISPATCH_PAT` Worker secrets
-- [ ] Register Telegram webhook
+### 1. Production platform credentials (owner action)
 
-### 3. `refresh-tokens.yml` (optional but recommended)
-- [ ] Daily OAuth token rotation for Blogger/LinkedIn
-- [ ] Writes refreshed tokens back to GitHub Secrets via libsodium-sealed API
+- [ ] Blogger OAuth (`BLOGGER_CLIENT_ID`, `BLOGGER_CLIENT_SECRET`, `BLOGGER_REFRESH_TOKEN`, `BLOGGER_BLOG_ID`) — consent screen **In production**
+- [ ] LinkedIn (`LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_MEMBER_URN`)
+- [ ] DEV.to (`DEVTO_API_KEY`)
+- [ ] Optional: AI provider keys (`GEMINI_API_KEY`, `GROQ_API_KEY`) if moving off `AI_PROVIDER=manual`
 
-### 4. Additional tests
-- [ ] Blogger adapter mocked HTTP tests
-- [ ] End-to-end DRY_RUN workflow test in CI against Wrangler local D1
+See `docs/DEPLOYMENT.md` → "Before real publishing" for `gh secret set` commands.
 
-### 5. Dashboard enhancements (post-MVP)
-- [ ] Manual edit flow (creates new `content_versions` row with `created_by='human'`)
-- [ ] Content history list (currently shows latest content only)
-- [ ] Publishing job status panel
+### 2. Go live (owner approval required)
 
-### 6. TypeScript migration (optional)
-- Spec calls for TypeScript; current implementation is JavaScript. A gradual migration is possible without changing runtime behavior.
+- [ ] DRY_RUN publish test per platform with credentials configured
+- [ ] Owner explicitly approves → set `DRY_RUN=false`
+- [ ] Verify one real publish per platform
+
+### 3. Optional hardening (post-MVP)
+
+- [ ] `content.status` update after publish (currently stays `ready_for_review`)
+- [ ] Auth on `POST /api/approval` (Worker dashboard endpoint)
+- [ ] `refresh-tokens.yml` automatic secret write-back (spec mentions libsodium-sealed API; current script validates only)
+- [ ] Dashboard: manual edit flow, content history, publishing job status panel
+- [ ] Clean up test rows in D1
 
 ## How to verify locally
 
 ```bash
 npm test                    # 14 tests, all should pass
+node scripts/check-setup.js # with secrets exported locally
 npm run serve               # dashboard at :4173
 npx wrangler dev            # worker API at :8787
 ```
@@ -107,11 +99,9 @@ npx wrangler dev            # worker API at :8787
 | Dashboard UI | `site/app.js`, `site/index.html`, `site/styles.css` |
 | DB queries | `src/db/queries/` |
 | New migration | `migrations/00N_description.sql` |
+| Credential readiness | `scripts/check-setup.js`, `docs/DEPLOYMENT.md` |
 
-## Deployment URL
+## Deployment URLs
 
-After `deploy.yml` runs on GitHub, the dashboard will be at:
-
-`https://<github-username>.github.io/contentflow-ai/`
-
-Configure the Worker URL in the dashboard with `?api=https://contentflow-ai.<subdomain>.workers.dev` or set `CONTENTFLOW_API_BASE` in a small config snippet.
+- Dashboard: https://ritik574-coder.github.io/contentflow-ai/
+- Worker API: https://contentflow-ai.ritik574-coder.workers.dev

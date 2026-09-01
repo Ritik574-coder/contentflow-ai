@@ -1,200 +1,202 @@
 # ContentFlow AI — Next Agent Handoff Report
 
-**Last updated:** 2026-09-01 (Phase 2 — E2E DRY_RUN verification)  
+**Last updated:** 2026-09-01 (Phase 4 — Verification and production credential preparation)  
 **Repo:** https://github.com/Ritik574-coder/contentflow-ai  
 **Dashboard:** https://ritik574-coder.github.io/contentflow-ai/  
 **Worker API:** https://contentflow-ai.ritik574-coder.workers.dev
 
 ---
 
-## Executive summary
+## Executive Summary
 
-| Area | Completion | Status |
-|---|---|---|
-| Application code (MVP) | **~98%** | Two production bugs fixed this session |
-| Automated tests | **100%** | 14 tests, CI green |
-| GitHub Pages dashboard | **100%** | Live, connected to Worker |
-| Cloudflare D1 database | **100%** | Migrations 001–008 applied; live content + publish records |
-| Cloudflare Worker | **100%** | Deployed; dispatch + read API working |
-| GitHub Actions secrets | **~60%** | `CF_API_TOKEN` set but **must be replaced** (see blockers) |
-| Telegram integration | **~20%** | Worker webhook secret only; bot + webhook not configured |
-| End-to-end DRY_RUN pipeline | **~85%** | Verified locally + via Worker dispatch; GitHub `process-content` blocked on permanent CF token |
-
-**Overall production readiness: ~80%** (up from ~65% after Phase 1)
+| Area | Status |
+|---|---|
+| Application code (MVP) | ~98% — implemented |
+| Automated tests | 14/14 passing |
+| GitHub Pages dashboard | Live |
+| Cloudflare D1 | Live, migrations 001–008 applied |
+| Cloudflare Worker | Live |
+| Permanent Cloudflare API token | Configured in GitHub |
+| Telegram Bot + webhook | Configured and verified (Phase 3) |
+| Full DRY_RUN E2E (Telegram path) | Verified (Phase 3) |
+| Phase 4 baseline re-verification | Completed this session |
+| Phase 4 DRY_RUN smoke (Actions path) | Completed this session |
+| Real platform publishing | Not enabled — owner credentials required |
+| Production readiness | ~90% |
 
 ---
 
-## Phase 2 — COMPLETED (2026-09-01)
+# Phase 4 — COMPLETED (2026-09-01)
 
-### 2.1 Bug fixes (committed to `main`)
+## 4.1 Baseline re-verification
 
-| Fix | File | Impact |
-|---|---|---|
-| D1 REST `run()` returned nested `meta` incorrectly → `last_row_id` was `undefined` | `src/db/client.js` | GitHub Actions scripts could not insert rows via D1 REST |
-| GitHub `workflow_dispatch` from Worker missing `User-Agent` header → 403 | `src/github.js` | Worker `/api/approval` could not trigger publish workflow |
-| AI fallback spread `manual` wrapper instead of `manual.data`; empty AI bodies accepted | `src/ai/index.js` | `process-content.yml` failed with `NOT NULL constraint failed: content_versions.body` |
-
-Commits: `83550ce`, `e960e71`
-
-### 2.2 Worker secrets configured
-
-| Secret | Status |
+| Check | Result |
 |---|---|
-| `TELEGRAM_SECRET_TOKEN` | Set (Phase 1) |
-| `GH_DISPATCH_PAT` | **Set** — uses repo owner's `gh` CLI token (`repo` + `workflow` scopes). Consider replacing with a dedicated fine-grained PAT per `docs/DEPLOYMENT.md`. |
+| `npm test` | 14/14 pass |
+| GitHub secrets | `CF_*`, `TELEGRAM_*` present |
+| Repo variables | `DRY_RUN=true`, `AI_PROVIDER=manual` |
+| Worker `/api/health` | `{"ok":true,"status":"healthy"}` |
+| Worker secrets (`wrangler secret list`) | `TELEGRAM_SECRET_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `GH_DISPATCH_PAT` |
+| Recent CI | `process-content` and `publish-content` workflows succeeding |
 
-### 2.3 GitHub configuration
+No blocking code issues found during baseline inspection.
 
-| Item | Status |
-|---|---|
-| `CF_API_TOKEN` / `CLOUDFLARE_API_TOKEN` | Set from wrangler OAuth token (**temporary — expired ~1h after creation; replace ASAP**) |
-| `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID` | Set |
-| `DRY_RUN` | `true` (repo variable) |
-| `AI_PROVIDER` | `manual` (repo variable — set this session) |
+## 4.2 DRY_RUN smoke test (this session)
 
-### 2.4 DRY_RUN end-to-end verification
+Re-verified the pipeline without enabling real publishing:
 
-**Verified path (local process + Worker approval + GitHub publish):**
-
-1. `node scripts/process.js` with remote D1 → content ID **7**, approval ID **2**
-2. `POST /api/approval` on Worker with `["blogger","devto"]` → `dispatch: "triggered"`
-3. `publish-content.yml` workflow_dispatch → **success** (run `33519026044`)
-4. D1 records confirmed:
-   - `platform_posts`: blogger + devto, status `published`, `dry_run` metadata
-   - `publishing_jobs`: job 2 status `completed`, `dry_run=1`
-   - `publishing_attempts`: 2× `success`, then 2× `skipped` on idempotency re-run
+1. **Process Content** via GitHub Actions (`workflow_dispatch`) — success (run `33529789571`)
+2. Content ID **11** created, approval ID **5** pending
+3. **Dashboard approval** via `POST /api/approval` with `["blogger"]` — `dispatch: "triggered"`
+4. **Publish Content** workflow — success (run `33529876044`)
+5. D1 confirmed:
+   - `publishing_jobs` id 5: `completed`, `dry_run=1`
+   - `platform_posts` id 4: `published` (blogger, dry-run metadata)
    - `audit_logs`: `processing_*`, `approval_received`, `publishing_*`
-5. Idempotency re-run (`approval_id=2` again) → **success**, no duplicate posts (run `33519085665`)
-6. Dashboard API `/api/content` returns content 7 with platform versions
 
-**Not yet verified (owner credentials required):**
+Telegram path was verified in Phase 3; dashboard approval remains a working fallback.
 
-- Telegram notification after processing
-- Telegram inline-keyboard approval → Worker webhook
-- `process-content.yml` via GitHub Actions UI (failed after OAuth token expired — needs permanent `CF_API_TOKEN`)
-- Real platform publishing (`DRY_RUN=false`)
-
-### 2.5 Test baseline
-
-```
-npm test → 14/14 pass (Node 22)
-```
-
----
-
-## Current blockers (owner action required)
-
-### P0 — Replace `CF_API_TOKEN` with a permanent API token
-
-The current GitHub secret was set from a **wrangler OAuth token** (expires in ~1 hour). After expiry, all GitHub Actions that touch D1 fail with:
-
-```
-D1 REST query failed (403): The given account is not valid or is not authorized to access this service
-```
-
-**Owner steps:**
-
-1. Go to https://dash.cloudflare.com/profile/api-tokens
-2. Create token: **Edit Cloudflare Workers** + **D1 Edit**, scoped to account `264490ec9c67ed5f105677e821abb574`
-3. Run:
-   ```bash
-   gh secret set CF_API_TOKEN -R Ritik574-coder/contentflow-ai
-   gh secret set CLOUDFLARE_API_TOKEN -R Ritik574-coder/contentflow-ai  # same value
-   ```
-4. Re-run **Actions → Process Content** to confirm ingestion works from CI
-
-OAuth tokens **cannot** be created via API (`9109 Unauthorized`); dashboard creation is required.
-
-### P1 — Telegram setup
-
-1. Create bot via @BotFather → `TELEGRAM_BOT_TOKEN`
-2. Get chat ID (message @userinfobot)
-3. GitHub secrets:
-   ```bash
-   gh secret set TELEGRAM_BOT_TOKEN -R Ritik574-coder/contentflow-ai
-   gh secret set TELEGRAM_CHAT_ID -R Ritik574-coder/contentflow-ai
-   ```
-4. Worker secrets:
-   ```bash
-   npx wrangler secret put TELEGRAM_BOT_TOKEN
-   npx wrangler secret put TELEGRAM_CHAT_ID
-   ```
-5. Register webhook (regenerate `TELEGRAM_SECRET_TOKEN` if lost):
-   ```bash
-   openssl rand -hex 24   # if regenerating
-   npx wrangler secret put TELEGRAM_SECRET_TOKEN
-   curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
-     -d "url=https://contentflow-ai.ritik574-coder.workers.dev/webhook/telegram" \
-     -d "secret_token=<TELEGRAM_SECRET_TOKEN>"
-   ```
-
-### P2 — Optional hardening
-
-- Replace `GH_DISPATCH_PAT` on Worker with a dedicated fine-grained PAT (`contents:write` + `actions:write` on `contentflow-ai` only)
-- Add `GEMINI_API_KEY` (or other AI keys) and set `AI_PROVIDER` to `auto` or remove the variable to use the fallback chain
-- Add Blogger/LinkedIn/DEV.to secrets before setting `DRY_RUN=false`
-
----
-
-## Infrastructure reference
-
-```
-Cloudflare Account ID:  264490ec9c67ed5f105677e821abb574
-D1 Database ID:         7e71bdf2-ac75-47df-8ff0-43ed4f438802
-D1 Database Name:       contentflow-ai
-workers.dev subdomain:  ritik574-coder
-Worker URL:             https://contentflow-ai.ritik574-coder.workers.dev
-Dashboard URL:          https://ritik574-coder.github.io/contentflow-ai/
-GitHub Repo:            Ritik574-coder/contentflow-ai
-```
-
----
-
-## Known issues / notes
-
-1. **`content.status` stays `ready_for_review` after publish** — publish job completes but does not update content status to `published`. Cosmetic; does not block DRY_RUN.
-2. **First publish job (id=1) stuck `queued`** — from failed pre-fix dispatch attempt; harmless.
-3. **Worker dispatch uses `workflow_dispatch`** (not `repository_dispatch`) — intentional per `src/github.js`; publish workflow supports both triggers.
-4. **Dashboard approval path works** as Telegram fallback until bot is configured.
-5. **Test content in D1** — content IDs 6–7 from E2E runs; safe to leave or purge later.
-
----
-
-## Verification commands
-
-```bash
-cd "/home/ritik/Documents/AI-Powered-Content-Automation-&-Distribution-System"
-npm test
-npx wrangler whoami
-npx wrangler secret list
-npx wrangler d1 execute contentflow-ai --remote --command "SELECT id, status FROM content ORDER BY id DESC LIMIT 5;"
-curl -s https://contentflow-ai.ritik574-coder.workers.dev/api/health
-gh secret list -R Ritik574-coder/contentflow-ai
-gh variable list -R Ritik574-coder/contentflow-ai
-```
-
----
-
-## Exact next step for the following agent
-
-1. **Owner:** Create permanent `CF_API_TOKEN` in Cloudflare dashboard and update GitHub secrets (P0 above).
-2. **Agent:** Re-run `process-content.yml` from GitHub Actions UI; confirm content appears in dashboard.
-3. **Owner:** Complete Telegram setup (P1).
-4. **Agent:** Run full E2E including Telegram notification + inline approval.
-5. **Owner:** Add platform credentials when ready for real publishing.
-6. **Agent:** Set `DRY_RUN=false` only after owner explicitly approves.
-
-Do **not** rebuild application code. Fix only issues found during verification.
-
----
-
-## Files changed in Phase 2
+## 4.3 Tooling and documentation updates
 
 | File | Change |
 |---|---|
-| `src/db/client.js` | Fix D1 REST `run()` metadata normalization |
-| `src/github.js` | Add `User-Agent` for GitHub API calls from Worker |
-| `src/ai/index.js` | Fix manual fallback + reject empty AI bodies |
+| `scripts/check-setup.js` | Added `dryRunE2EReady`, `realPublishReady`, `readyPlatforms`, `missingForRealPublish[]` per platform |
+| `docs/DEPLOYMENT.md` | Synced with Phase 3 reality; added "Before real publishing" owner checklist |
+| `PROGRESS.md` | Marked infrastructure complete; remaining work = platform credentials |
+| `README.md` | Added `refresh-tokens.yml`; points to `NEXT-AGENT-REPORT.md` as source of truth |
+
+## 4.4 Blocking issues
+
+None found. Deferred (non-blocking):
+
+- `content.status` stays `ready_for_review` after publish
+- `POST /api/approval` has no auth (documented for pre-production hardening)
+- `refresh-tokens.yml` validates only — does not rotate secrets automatically
+- Test rows remain in D1 (content IDs 6–11)
+
+---
+
+# Remaining Work
+
+## P0 — Platform credentials (owner action)
+
+Real publishing is disabled. `DRY_RUN=true` must remain until owner completes credential setup and explicitly approves going live.
+
+### Blogger
+
+OAuth consent screen must be **In production** (not Testing — 7-day token expiry).
+
+```bash
+gh secret set BLOGGER_CLIENT_ID -R Ritik574-coder/contentflow-ai
+gh secret set BLOGGER_CLIENT_SECRET -R Ritik574-coder/contentflow-ai
+gh secret set BLOGGER_REFRESH_TOKEN -R Ritik574-coder/contentflow-ai
+gh secret set BLOGGER_BLOG_ID -R Ritik574-coder/contentflow-ai
+```
+
+Setup: [Google Blogger API](https://developers.google.com/blogger) + Google Cloud OAuth.
+
+### LinkedIn (publish-only in MVP)
+
+```bash
+gh secret set LINKEDIN_ACCESS_TOKEN -R Ritik574-coder/contentflow-ai
+gh secret set LINKEDIN_MEMBER_URN -R Ritik574-coder/contentflow-ai
+```
+
+Setup: LinkedIn Developer app with "Share on LinkedIn" product.
+
+### DEV.to
+
+```bash
+gh secret set DEVTO_API_KEY -R Ritik574-coder/contentflow-ai
+```
+
+Setup: DEV.to account settings → API key.
+
+### Verify after adding secrets
+
+```bash
+# Export secrets locally, then:
+node scripts/check-setup.js
+```
+
+Confirm `readyPlatforms` lists configured platform(s).
+
+## P1 — Go live (owner approval required)
+
+1. With `DRY_RUN=true`, process content and approve **one platform at a time** to confirm adapter validation
+2. Owner explicitly approves real publishing
+3. Set `DRY_RUN=false`:
+   ```bash
+   gh variable set DRY_RUN -R Ritik574-coder/contentflow-ai --body "false"
+   ```
+4. Process real content → approve **only selected platform(s)** → verify live post
+
+**Never enable real publishing without owner approval.**
+
+---
+
+# Production Safety
+
+Do NOT set `DRY_RUN=false` until:
+
+1. Required platform credentials are configured
+2. Owner explicitly approves real publishing
+3. Agent verifies only the selected platform is published to
+
+---
+
+# Known Issues
+
+1. `content.status` may remain `ready_for_review` after publishing — cosmetic, non-blocking
+2. Old test rows and a queued publishing job from early failed runs may remain in D1
+3. Worker triggers publish via `workflow_dispatch` (intentional)
+4. `GH_DISPATCH_PAT` works but may later be replaced with a dedicated fine-grained PAT
+5. `POST /api/approval` has no authentication — harden before broad production use
+
+---
+
+# Verification Baseline
+
+```bash
+npm test                                    # expect 14/14
+curl -s https://contentflow-ai.ritik574-coder.workers.dev/api/health
+npx wrangler secret list
+npx wrangler d1 execute contentflow-ai --remote --command "SELECT id, status FROM content ORDER BY id DESC LIMIT 5;"
+gh secret list -R Ritik574-coder/contentflow-ai
+gh variable list -R Ritik574-coder/contentflow-ai
+node scripts/check-setup.js                 # with secrets exported locally
+```
+
+---
+
+# Exact Next Agent Task
+
+Do NOT rebuild the project. Do NOT redesign the architecture.
+
+1. Confirm owner has added platform credential(s) — if not, stop and wait
+2. Run `node scripts/check-setup.js` with secrets exported
+3. Run DRY_RUN publish test per configured platform
+4. Only after owner approval: set `DRY_RUN=false` and verify one real publish
+5. Update this report with results
+
+---
+
+# Critical Continuation Rule
+
+This project is developed by multiple AI agents. Treat the repository and this handoff report as the existing project state. **Never rebuild completed functionality from scratch.**
+
+The DRY_RUN pipeline is fully verified. The next milestone is **real platform credentials → single-platform live publish**.
+
+---
+
+# Files changed in Phase 4
+
+| File | Change |
+|---|---|
+| `scripts/check-setup.js` | Enhanced readiness reporting |
+| `docs/DEPLOYMENT.md` | Synced with live state + owner checklist |
+| `PROGRESS.md` | Updated completion status |
+| `README.md` | Workflow table + status pointer |
 | `NEXT-AGENT-REPORT.md` | This file |
 
-**Database changes:** E2E test rows only (content 6–7, approvals 1–2, platform_posts 1–2, publishing_jobs 1–2). No schema migrations.
+**Database changes:** Phase 4 smoke added content ID 11, approval ID 5, platform_post ID 4. No schema migrations.

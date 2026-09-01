@@ -66,6 +66,7 @@ Migrations live in `migrations/` (001–008).
 | `process-content.yml` | `workflow_dispatch` / `content-submitted` | Ingest + AI processing + Telegram notification |
 | `publish-content.yml` | `workflow_dispatch` / `publish-approved` | Publish to selected platforms |
 | `collect-metrics.yml` | Every 6 hours | Poll metrics/comments |
+| `refresh-tokens.yml` | Daily | Credential health check (validates tokens; does not rotate secrets) |
 | `cleanup.yml` | Weekly | Purge stale publishing jobs |
 | `test.yml` | Push / PR | Unit + integration tests (`DRY_RUN=true`) |
 | `deploy.yml` | Push to `main` | GitHub Pages + Cloudflare Worker |
@@ -115,4 +116,4 @@ Tests cover platform adapters (mocked HTTP), idempotency keys, the processing pi
 
 ## Project status
 
-See `PROGRESS.md` for what is complete, what remains, and where the next agent should continue.
+See `NEXT-AGENT-REPORT.md` for the current handoff state (~90% ready; DRY_RUN E2E verified). See `PROGRESS.md` for the feature checklist and `docs/DEPLOYMENT.md` for owner setup steps before real publishing.
