@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ContentFlow AI Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">AI-Assisted Publishing</p>
+        <h1>ContentFlow AI</h1>
+      </div>
+      <div class="header-actions">
+        <span class="badge warning" id="connectionStatus">Connecting</span>
+        <button class="primary" id="publishSelected">Approve Selected</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel hero">
+        <div>
+          <p class="eyebrow">Pipeline status</p>
+          <h2 id="pipelineStatus">Loading</h2>
+        </div>
+        <span class="badge success" id="approvalStatus">Approval: pending</span>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <h3>Raw input</h3>
+        </div>
+        <p id="rawText"></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <h3>Structured draft</h3>
+        </div>
+        <div id="draftCard"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <h3>Platform approval</h3>
+        </div>
+        <div id="platformList" class="platform-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <h3>Platform versions</h3>
+        </div>
+        <div id="versionList" class="version-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <h3>Metrics and comments</h3>
+        </div>
+        <div id="metricsList" class="metrics-list"></div>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

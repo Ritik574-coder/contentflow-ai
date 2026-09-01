@@ -1,0 +1,15 @@
+name = "contentflow-ai"
+main = "worker/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+APP_NAME = "ContentFlow AI"
+ENVIRONMENT = "development"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "contentflow-ai"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[observability]
+enabled = true

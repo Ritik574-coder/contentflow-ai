@@ -1,0 +1,253 @@
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-alt: #f0f3f6;
+  --line: #d6dde5;
+  --text: #17202a;
+  --muted: #647181;
+  --accent: #087f8c;
+  --accent-strong: #065f68;
+  --success: #1f8a4c;
+  --warning: #9a6b00;
+  --danger: #b42318;
+  --shadow: rgba(23, 32, 42, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, Arial, sans-serif;
+  line-height: 1.5;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.94);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+}
+
+h1, h2, h3, h4, p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: 1.45rem;
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 1.35rem;
+  text-transform: capitalize;
+}
+
+h3 {
+  margin-bottom: 0;
+  font-size: 1rem;
+}
+
+h4 {
+  margin-bottom: 0.45rem;
+  font-size: 1rem;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-strong);
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.primary {
+  min-height: 2.5rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.primary:hover {
+  background: var(--accent-strong);
+}
+
+.primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.layout {
+  max-width: 1180px;
+  margin: 1.25rem auto;
+  padding: 0 1rem 3rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 12px 30px var(--shadow);
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge.success {
+  background: #e7f6ed;
+  border-color: #b8e3ca;
+  color: var(--success);
+}
+
+.badge.warning {
+  background: #fff6db;
+  border-color: #f2d37b;
+  color: var(--warning);
+}
+
+.platform-list, .metrics-list, .version-list, .claim-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.platform-item, .metric-item, .version-item, .claim {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.85rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  text-align: left;
+}
+
+.platform-item {
+  cursor: pointer;
+}
+
+.platform-item.selected {
+  border-color: var(--success);
+  background: #edf8f1;
+}
+
+.platform-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.platform-item span:first-child,
+.metric-item span:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.platform-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5.8rem;
+  min-height: 2rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  padding: 0.35rem 0.55rem;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.platform-toggle.selected {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.meta, .meta-grid {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.metric-item span,
+.claim span {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+#rawText {
+  white-space: pre-wrap;
+}
+
+@media (max-width: 768px) {
+  .topbar, .hero, .header-actions, .platform-item, .metric-item, .version-item, .claim {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .primary {
+    width: 100%;
+  }
+
+  .meta-grid {
+    grid-template-columns: 1fr;
+  }
+}
