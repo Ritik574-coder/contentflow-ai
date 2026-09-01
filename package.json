@@ -10,7 +10,9 @@
     "worker:dev": "npx wrangler dev",
     "worker:deploy": "npx wrangler deploy",
     "db:migrate:local": "npx wrangler d1 migrations apply contentflow-ai --local",
-    "db:migrate:remote": "npx wrangler d1 migrations apply contentflow-ai --remote"
+    "db:migrate:remote": "npx wrangler d1 migrations apply contentflow-ai --remote",
+    "setup:check": "node scripts/check-setup.js",
+    "provision:cloudflare": "bash scripts/provision-cloudflare.sh"
   },
   "devDependencies": {
     "wrangler": "^4.127.1"

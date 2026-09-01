@@ -1,7 +1,7 @@
 # ContentFlow AI — Implementation Progress
 
 **Last updated:** 2026-09-01  
-**Status:** MVP scaffold complete; ready for credential configuration and production wiring.
+**Status:** MVP code complete; production wiring pending (see `NEXT-AGENT-REPORT.md`)
 
 ## Completed
 
@@ -45,6 +45,8 @@
 - [x] `test.yml`, `deploy.yml` (Pages + Worker), `process-content.yml`, `publish-content.yml`
 
 ## Not yet done (next agent should continue here)
+
+> **Full handoff:** read `NEXT-AGENT-REPORT.md` and `docs/DEPLOYMENT.md` first.
 
 ### 1. Production credentials (owner action required)
 The pre-build checklist (Master Build Prompt §1) requires the owner to provision:
