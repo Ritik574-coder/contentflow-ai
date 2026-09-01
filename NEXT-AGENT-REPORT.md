@@ -1,175 +1,164 @@
 # ContentFlow AI — Next Agent Handoff Report
 
-**Generated:** 2026-09-01  
+**Last updated:** 2026-09-01 (Phase 1 completed)  
 **Repo:** https://github.com/Ritik574-coder/contentflow-ai  
-**Dashboard (live):** https://ritik574-coder.github.io/contentflow-ai/  
-**Prepared by:** Previous implementation session
+**Dashboard:** https://ritik574-coder.github.io/contentflow-ai/  
+**Worker API:** https://contentflow-ai.ritik574-coder.workers.dev
 
 ---
 
 ## Executive summary
 
-| Area | Completion | Notes |
+| Area | Completion | Status |
 |---|---|---|
-| Application code (MVP) | **~95%** | All core paths implemented |
-| Automated tests | **100%** | 14 tests, CI green on Node 22 |
-| GitHub Pages dashboard | **100%** | Deployed, shows sample data offline |
-| Cloudflare Worker + D1 | **0%** | Blocked: no Cloudflare auth on build machine |
-| GitHub Actions secrets | **0%** | Repo has zero secrets configured |
-| End-to-end live pipeline | **0%** | Never run against real infra |
-| **Overall production readiness** | **~40%** | Code done; infra wiring is the gap |
+| Application code (MVP) | **~95%** | Complete |
+| Automated tests | **100%** | 14 tests, CI green |
+| GitHub Pages dashboard | **100%** | Live, `site/config.js` points to Worker |
+| Cloudflare D1 database | **100%** | Created, migrations 001–008 applied |
+| Cloudflare Worker | **100%** | Deployed to workers.dev |
+| GitHub Actions secrets | **~40%** | Account ID + D1 ID set; **CF_API_TOKEN still missing** |
+| Telegram integration | **~20%** | Worker secret set; bot token + webhook not configured |
+| End-to-end live pipeline | **0%** | Not tested yet |
 
-**Bottom line for next agent:** Do not rewrite the app. Wire up Cloudflare + secrets + Telegram, then run a DRY_RUN end-to-end test.
-
----
-
-## What is DONE (do not rebuild)
-
-### Core pipeline
-- `scripts/process.js` — ingest → AI/manual → version rows → approval request (default: no platforms selected)
-- `scripts/publish.js` — idempotent publish with `DRY_RUN` guard
-- `scripts/collect-metrics.js` — metrics/comments collection
-- `scripts/cleanup.js` — stale job purge
-- `scripts/refresh-tokens.js` — credential validation (added this session)
-- `scripts/check-setup.js` — reports missing env vars (added this session)
-
-### Infrastructure code
-- `worker/index.js` — Telegram webhook + dashboard read API + approval POST
-- `worker/telegram.js` — inline keyboard flow
-- `migrations/001`–`008` — full schema + platform seed + default accounts
-
-### Platform adapters (`src/platforms/`)
-| Platform | Publish | Metrics | Comments | Enabled |
-|---|---|---|---|---|
-| Blogger | ✅ | unsupported | ✅ | yes |
-| LinkedIn | ✅ | unsupported | unsupported | yes |
-| DEV.to | ✅ | best-effort | unsupported | yes |
-| Hashnode | ✅ (code) | unsupported | unsupported | **no** |
-| X | unsupported stub | unsupported | unsupported | **no** |
-
-### CI/CD workflows (all present)
-- `test.yml` — PR/push tests
-- `deploy.yml` — Pages + Worker (Worker skips without CF secrets; now includes D1 migrations)
-- `process-content.yml`, `publish-content.yml`
-- `collect-metrics.yml` (every 6h), `cleanup.yml` (weekly), `refresh-tokens.yml` (daily)
-
-### Tests (`npm test` — 14 passing)
-- Unit: contentflow, keyboard, idempotency, adapters (mocked HTTP)
-- Integration: full process pipeline + DRY_RUN publish idempotency (in-memory SQLite via `node:sqlite`, **requires Node 22**)
+**Overall production readiness: ~65%** (up from ~40% before Phase 1)
 
 ---
 
-## What is NOT DONE (next agent priority order)
+## Phase 1 — COMPLETED (2026-09-01)
 
-### P0 — Blockers for any live functionality
+### 1.1 Cloudflare authentication
+- `npx wrangler login` completed for `ritik74820@gmail.com`
+- Account ID: `264490ec9c67ed5f105677e821abb574`
 
-1. **Cloudflare login + D1 provisioning**
-   - `wrangler.toml` still has placeholder `database_id = "00000000-0000-0000-0000-000000000000"`
-   - Run: `./scripts/provision-cloudflare.sh` (requires `npx wrangler login` by owner)
-   - Commit updated `wrangler.toml` with real database_id
+### 1.2 D1 database provisioned
+- Database name: `contentflow-ai`
+- Database ID: `7e71bdf2-ac75-47df-8ff0-43ed4f438802`
+- Region: APAC (SIN colo)
+- All 8 migrations applied successfully (remote)
+- Verified seed: blogger/linkedin/devto enabled, hashnode/x disabled
 
-2. **GitHub Actions secrets** (currently empty — verified via `gh secret list`)
-   ```
-   CF_ACCOUNT_ID, CF_API_TOKEN, CF_D1_DATABASE_ID
-   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
-   GH_DISPATCH_PAT (for Worker → publish workflow)
-   ```
-   See full list in `docs/DEPLOYMENT.md`
+### 1.3 workers.dev subdomain registered
+- Subdomain: `ritik574-coder`
+- Worker URL: `https://contentflow-ai.ritik574-coder.workers.dev`
 
-3. **Deploy Cloudflare Worker**
+### 1.4 Worker deployed
+- Version ID: `b3c584b3-c78c-4d93-8468-06fe1b651e7b`
+- D1 binding: `env.DB` → `contentflow-ai`
+- Worker vars set in `wrangler.toml`:
+  - `GH_REPO_OWNER=Ritik574-coder`
+  - `GH_REPO_NAME=contentflow-ai`
+  - `DASHBOARD_URL=https://ritik574-coder.github.io/contentflow-ai/`
+  - `ENVIRONMENT=production`
+
+### 1.5 Worker secrets set
+| Secret | Status |
+|---|---|
+| `TELEGRAM_SECRET_TOKEN` | Set on Worker (generated during deploy — **not in git**) |
+
+### 1.6 GitHub secrets configured
+| Secret | Value status |
+|---|---|
+| `CF_ACCOUNT_ID` | Set |
+| `CLOUDFLARE_ACCOUNT_ID` | Set (alias) |
+| `CF_D1_DATABASE_ID` | Set |
+| `CF_API_TOKEN` | **NOT SET** — required for CI Worker deploy |
+| `TELEGRAM_BOT_TOKEN` | Not set |
+| `TELEGRAM_CHAT_ID` | Not set |
+| `GH_DISPATCH_PAT` | Not set |
+
+### 1.7 Dashboard connected to Worker
+- `site/config.js` updated with Worker URL
+- Pending: push to GitHub to redeploy Pages with new config
+
+### 1.8 `wrangler.toml` updated
+- Real `database_id` committed (was placeholder `00000000-...`)
+
+---
+
+## Phase 2 — NEXT AGENT PRIORITY (owner + agent)
+
+### P0 — Unblock CI Worker deploys
+
+**Create Cloudflare API token** (OAuth cannot create tokens programmatically):
+
+1. Go to https://dash.cloudflare.com/profile/api-tokens
+2. Create token with template **Edit Cloudflare Workers** + **D1 Edit**
+3. Scope to account `264490ec9c67ed5f105677e821abb574`
+4. Add to GitHub:
    ```bash
-   npx wrangler deploy
-   npx wrangler secret put TELEGRAM_SECRET_TOKEN
-   npx wrangler secret put GH_DISPATCH_PAT
-   npx wrangler secret put GH_REPO_OWNER   # Ritik574-coder
-   npx wrangler secret put GH_REPO_NAME    # contentflow-ai
+   gh secret set CF_API_TOKEN -R Ritik574-coder/contentflow-ai
+   gh secret set CLOUDFLARE_API_TOKEN -R Ritik574-coder/contentflow-ai  # same value
    ```
 
-4. **Register Telegram webhook** → `<worker-url>/webhook/telegram`
+### P1 — Telegram setup
 
-5. **Connect dashboard to Worker**
-   - Set `site/config.js` → `window.CONTENTFLOW_API_BASE = '<worker-url>'`
-   - Or use `?api=<worker-url>` query param
+1. Create bot via @BotFather → get `TELEGRAM_BOT_TOKEN`
+2. Get your chat ID (message @userinfobot)
+3. Add GitHub secrets:
+   ```bash
+   gh secret set TELEGRAM_BOT_TOKEN -R Ritik574-coder/contentflow-ai
+   gh secret set TELEGRAM_CHAT_ID -R Ritik574-coder/contentflow-ai
+   ```
+4. Set Worker secrets:
+   ```bash
+   npx wrangler secret put TELEGRAM_BOT_TOKEN
+   npx wrangler secret put TELEGRAM_CHAT_ID
+   ```
+5. Register webhook (use the `TELEGRAM_SECRET_TOKEN` already on Worker, or regenerate):
+   ```bash
+   curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
+     -d "url=https://contentflow-ai.ritik574-coder.workers.dev/webhook/telegram" \
+     -d "secret_token=<TELEGRAM_SECRET_TOKEN>"
+   ```
+   If secret was lost, regenerate: `openssl rand -hex 24` then `npx wrangler secret put TELEGRAM_SECRET_TOKEN`
 
-### P1 — First successful end-to-end test
+### P2 — GitHub dispatch PAT (for publish workflow from Worker)
 
-6. Run `process-content.yml` via workflow_dispatch with sample `raw_text`
-7. Approve via dashboard or Telegram
-8. Confirm `publish-content.yml` completes with `DRY_RUN=true`
-9. Verify rows in D1: `content`, `content_versions`, `approval_requests`, `platform_posts`
+1. Create fine-grained PAT: `contents:write` + `actions:write` on `contentflow-ai` repo
+2. ```bash
+   npx wrangler secret put GH_DISPATCH_PAT
+   ```
 
-### P2 — Real publishing
+### P3 — End-to-end DRY_RUN test
 
-10. Add platform secrets (Blogger OAuth, LinkedIn, DEV.to)
-11. Set repo variable `DRY_RUN=false`
-12. Publish one test post to each selected platform
+1. Push latest code (config.js + wrangler.toml)
+2. Actions → **Process Content** → Run with sample `raw_text`
+3. Open dashboard: https://ritik574-coder.github.io/contentflow-ai/
+4. Select platforms → Approve Selected
+5. Confirm `publish-content.yml` runs with `DRY_RUN=true`
+6. Verify D1 rows via:
+   ```bash
+   npx wrangler d1 execute contentflow-ai --remote --command "SELECT id, status FROM content;"
+   ```
 
-### P3 — Nice to have (post-MVP)
+### P4 — Real publishing (when ready)
 
-- Dashboard manual edit flow (new `content_versions` row)
-- Content history list (currently latest only)
-- Blogger adapter mocked HTTP tests
-- TypeScript migration (spec says TS; code is JS)
-- GitHub Secrets write-back for OAuth rotation (libsodium sealing)
-
----
-
-## Environment state on last session exit
-
-| Check | Result |
-|---|---|
-| `.env` file | **Not present** |
-| `wrangler whoami` | **Not authenticated** |
-| GitHub secrets | **None configured** |
-| GitHub Pages | **Deployed and live** |
-| Worker | **Not deployed** |
-| D1 | **Not created** |
-
----
-
-## Key files for common tasks
-
-| Task | File(s) |
-|---|---|
-| Deploy instructions | `docs/DEPLOYMENT.md` |
-| Progress checklist | `PROGRESS.md` |
-| Provision Cloudflare | `scripts/provision-cloudflare.sh` |
-| Check what's missing | `node scripts/check-setup.js` |
-| Worker entry | `worker/index.js` |
-| Dashboard config | `site/config.js` |
-| DB schema | `migrations/` |
-| Wrangler config | `wrangler.toml` |
+- Add Blogger/LinkedIn/DEV.to secrets (see `docs/DEPLOYMENT.md`)
+- Set repo variable `DRY_RUN=false`
 
 ---
 
-## Known gotchas
-
-1. **Node version:** CI must use Node **22+** (`node:sqlite` in integration tests). Node 20 fails CI.
-2. **Blogger OAuth:** Consent screen must be **"In production"** — Testing mode kills refresh tokens after 7 days.
-3. **Default platform selection:** All platforms start **unselected** — user must tick before approve.
-4. **DRY_RUN:** Defaults to `true` in CI. Real publishes only when repo variable `DRY_RUN=false`.
-5. **Worker env naming:** Worker checks `TELEGRAM_SECRET_TOKEN`; `.env.example` also lists `TELEGRAM_WEBHOOK_SECRET` as alias — use the same value.
-6. **Git repo location:** Project has its **own** git repo at `AI-Powered-Content-Automation-&-Distribution-System/.git` (not the parent home directory repo).
-7. **deploy.yml Worker skip:** Until `CF_API_TOKEN` + `CF_ACCOUNT_ID` are in GitHub Secrets, Worker deploy is silently skipped.
-
----
-
-## Suggested next-agent prompt
+## Infrastructure reference (copy-paste)
 
 ```
-Read NEXT-AGENT-REPORT.md and docs/DEPLOYMENT.md first.
-
-The ContentFlow AI MVP code is complete. Your job is production wiring only:
-1. Help the owner run wrangler login and ./scripts/provision-cloudflare.sh
-2. Add GitHub Actions secrets (list in docs/DEPLOYMENT.md)
-3. Deploy Worker and set Worker secrets
-4. Register Telegram webhook
-5. Set site/config.js with Worker URL
-6. Run DRY_RUN end-to-end test via GitHub Actions
-7. Update NEXT-AGENT-REPORT.md with results
-
-Do NOT rewrite the application. Preserve all existing code unless fixing a bug.
+Cloudflare Account ID:  264490ec9c67ed5f105677e821abb574
+D1 Database ID:         7e71bdf2-ac75-47df-8ff0-43ed4f438802
+D1 Database Name:       contentflow-ai
+workers.dev subdomain:  ritik574-coder
+Worker URL:             https://contentflow-ai.ritik574-coder.workers.dev
+Dashboard URL:          https://ritik574-coder.github.io/contentflow-ai/
+GitHub Repo:            Ritik574-coder/contentflow-ai
 ```
+
+---
+
+## Known issues / notes
+
+1. **Worker SSL from local curl** — handshake failures observed from this machine's curl; deploy succeeded and Worker is live on Cloudflare's edge. Verify from browser or GitHub Actions.
+2. **CF_API_TOKEN** — Cannot be auto-created via OAuth; owner must create in Cloudflare dashboard (see P0 above).
+3. **TELEGRAM_SECRET_TOKEN** — Set on Worker during Phase 1 but not stored in repo. Regenerate if lost.
+4. **No content in D1 yet** — Database is seeded with platforms/accounts but has zero content rows until `process-content.yml` runs.
+5. **Node 22 required** for CI tests (`node:sqlite`).
 
 ---
 
@@ -177,23 +166,35 @@ Do NOT rewrite the application. Preserve all existing code unless fixing a bug.
 
 ```bash
 cd "/home/ritik/Documents/AI-Powered-Content-Automation-&-Distribution-System"
-npm test                          # expect 14/14 pass
-node scripts/check-setup.js       # reports missing secrets (exit 1 without D1 creds)
-npm run serve                     # dashboard :4173
-npx wrangler dev                  # worker :8787 (needs D1 local or remote binding)
+npm test
+npx wrangler whoami
+npx wrangler d1 execute contentflow-ai --remote --command "SELECT key, enabled FROM platforms;"
 gh secret list -R Ritik574-coder/contentflow-ai
-gh run list --workflow=deploy.yml --limit 3
+node scripts/check-setup.js   # needs CF_API_TOKEN in env to pass fully
 ```
 
 ---
 
-## Session changes made while creating this report
+## Suggested next-agent prompt
 
-- Added `scripts/check-setup.js`, `scripts/refresh-tokens.js`, `scripts/provision-cloudflare.sh`
-- Filled in `.github/workflows/refresh-tokens.yml`
-- Updated `deploy.yml` to apply D1 migrations before Worker deploy
-- Added `site/config.js` for Worker URL configuration
-- Added `docs/DEPLOYMENT.md` (step-by-step owner guide)
-- Added this `NEXT-AGENT-REPORT.md`
+```
+Read NEXT-AGENT-REPORT.md. Phase 1 (Cloudflare D1 + Worker) is done.
 
-**Not committed yet at time of writing** — next step is commit + push.
+Your tasks:
+1. Help owner create CF_API_TOKEN and add to GitHub secrets
+2. Configure Telegram bot + webhook
+3. Set GH_DISPATCH_PAT on Worker
+4. Push pending commits and run DRY_RUN end-to-end test
+5. Update this report with test results
+
+Do NOT rewrite the application code.
+```
+
+---
+
+## Files changed in Phase 1 (pending commit)
+
+- `wrangler.toml` — real database_id + production vars
+- `site/config.js` — Worker URL
+- `NEXT-AGENT-REPORT.md` — this file
+- `docs/DEPLOYMENT.md` — updated status section

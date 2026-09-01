@@ -1,7 +1,7 @@
 # ContentFlow AI — Implementation Progress
 
-**Last updated:** 2026-09-01  
-**Status:** MVP code complete; production wiring pending (see `NEXT-AGENT-REPORT.md`)
+**Last updated:** 2026-09-01 (Phase 1 complete)  
+**Status:** Cloudflare D1 + Worker deployed; Telegram + API token + E2E test remain
 
 ## Completed
 
@@ -49,11 +49,14 @@
 > **Full handoff:** read `NEXT-AGENT-REPORT.md` and `docs/DEPLOYMENT.md` first.
 
 ### 1. Production credentials (owner action required)
-The pre-build checklist (Master Build Prompt §1) requires the owner to provision:
 
-- [ ] Public GitHub repo with Actions secrets configured
-- [ ] Cloudflare account: D1 database created, real `database_id` in `wrangler.toml`
-- [ ] Telegram bot token + chat ID + webhook secret
+- [x] Public GitHub repository — https://github.com/Ritik574-coder/contentflow-ai
+- [x] Cloudflare account logged in (`ritik74820@gmail.com`)
+- [x] D1 database created + migrations applied
+- [x] Worker deployed to `contentflow-ai.ritik574-coder.workers.dev`
+- [x] GitHub secrets: `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID` set
+- [ ] `CF_API_TOKEN` — create in Cloudflare dashboard (see NEXT-AGENT-REPORT.md)
+- [ ] Telegram bot token + chat ID + webhook registration
 - [ ] At least one AI provider key (or confirm `AI_PROVIDER=manual`)
 - [ ] Google OAuth for Blogger (**consent screen = In production**)
 - [ ] LinkedIn Developer app (Share on LinkedIn product)
@@ -61,11 +64,13 @@ The pre-build checklist (Master Build Prompt §1) requires the owner to provisio
 - [ ] `GH_DISPATCH_PAT` for Worker → GitHub workflow dispatch
 
 ### 2. Cloudflare Worker deployment
-- [ ] Replace placeholder `database_id` in `wrangler.toml`
-- [ ] Run `npx wrangler d1 migrations apply contentflow-ai --remote`
-- [ ] Deploy Worker: `npx wrangler deploy`
-- [ ] Set Worker secrets (`TELEGRAM_SECRET_TOKEN`, `GH_DISPATCH_PAT`, etc.)
-- [ ] Register Telegram webhook pointing to `/webhook/telegram`
+
+- [x] Real `database_id` in `wrangler.toml`
+- [x] Migrations applied remotely
+- [x] Worker deployed
+- [x] `TELEGRAM_SECRET_TOKEN` set on Worker
+- [ ] `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `GH_DISPATCH_PAT` Worker secrets
+- [ ] Register Telegram webhook
 
 ### 3. `refresh-tokens.yml` (optional but recommended)
 - [ ] Daily OAuth token rotation for Blogger/LinkedIn

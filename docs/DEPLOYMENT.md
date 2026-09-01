@@ -6,10 +6,20 @@ Step-by-step instructions to take the MVP from **code complete** to **fully live
 
 | Component | URL | Status |
 |---|---|---|
-| Dashboard (GitHub Pages) | https://ritik574-coder.github.io/contentflow-ai/ | Live (sample data) |
+| Dashboard (GitHub Pages) | https://ritik574-coder.github.io/contentflow-ai/ | Live (config update pending push) |
 | GitHub repo | https://github.com/Ritik574-coder/contentflow-ai | Live |
-| Cloudflare Worker API | `https://contentflow-ai.<account>.workers.dev` | **Not deployed** |
-| D1 database | — | **Not provisioned** |
+| Cloudflare Worker API | https://contentflow-ai.ritik574-coder.workers.dev | **Deployed** |
+| D1 database | `contentflow-ai` (`7e71bdf2-ac75-47df-8ff0-43ed4f438802`) | **Provisioned** |
+
+### Cloudflare credentials (for reference)
+
+| Item | Value |
+|---|---|
+| Account ID | `264490ec9c67ed5f105677e821abb574` |
+| D1 Database ID | `7e71bdf2-ac75-47df-8ff0-43ed4f438802` |
+| workers.dev subdomain | `ritik574-coder` |
+
+> `CF_API_TOKEN` must still be created manually in the Cloudflare dashboard and added to GitHub Secrets for CI deploys.
 
 ---
 
