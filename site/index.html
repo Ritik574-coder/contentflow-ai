@@ -3,61 +3,81 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ContentFlow AI Dashboard</title>
+    <meta name="theme-color" content="#0b1220" />
+    <meta name="description" content="ContentFlow AI content review and publishing workspace." />
+    <title>ContentFlow AI | Publishing workspace</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <header class="topbar">
-      <div>
-        <p class="eyebrow">AI-Assisted Publishing</p>
-        <h1>ContentFlow AI</h1>
-      </div>
-      <div class="header-actions">
-        <span class="badge warning" id="connectionStatus">Connecting</span>
-        <button class="primary" id="publishSelected">Approve Selected</button>
+      <a class="brand" href="./" aria-label="ContentFlow AI home">
+        <span class="brand-mark" aria-hidden="true">✦</span>
+        <span><strong>ContentFlow</strong><small>AI publishing workspace</small></span>
+      </a>
+      <div class="topbar-right">
+        <div class="workspace-label"><span class="status-dot"></span>Editorial workspace</div>
+        <div class="header-actions">
+          <span class="badge warning" id="connectionStatus">Connecting</span>
+          <button class="primary" id="publishSelected"><span aria-hidden="true">↗</span> Approve selected</button>
+        </div>
       </div>
     </header>
 
     <main class="layout">
-      <section class="panel hero">
+      <section class="welcome">
         <div>
-          <p class="eyebrow">Pipeline status</p>
-          <h2 id="pipelineStatus">Loading</h2>
+          <p class="eyebrow">Today’s publishing queue</p>
+          <h1>Turn ideas into <span>work worth sharing.</span></h1>
+          <p class="welcome-copy">Review your AI-assisted draft, select the channels that fit, and publish with confidence.</p>
         </div>
-        <span class="badge success" id="approvalStatus">Approval: pending</span>
+        <div class="welcome-art" aria-hidden="true"><span class="orb orb-one"></span><span class="orb orb-two"></span><div class="art-card"><span class="art-line"></span><span class="art-line short"></span><span class="art-line"></span><b>Ready to share</b></div></div>
       </section>
 
-      <section class="panel">
+      <section class="overview-grid" aria-label="Content overview">
+        <div class="stat-card"><span class="stat-icon violet">✦</span><div><span class="stat-label">Pipeline status</span><strong id="pipelineStatus">Loading</strong></div></div>
+        <div class="stat-card"><span class="stat-icon mint">✓</span><div><span class="stat-label">Review status</span><strong id="approvalStatus">Approval: pending</strong></div></div>
+        <div class="stat-card"><span class="stat-icon amber">◌</span><div><span class="stat-label">Connected channels</span><strong>3 active</strong></div></div>
+      </section>
+
+      <section class="content-grid">
+      <section class="panel raw-panel">
         <div class="panel-heading">
-          <h3>Raw input</h3>
+          <div><span class="section-kicker">01 / Source</span><h3>Raw input</h3></div>
+          <span class="panel-mark">Original notes</span>
         </div>
         <p id="rawText"></p>
       </section>
 
-      <section class="panel">
+      <section class="panel draft-panel">
         <div class="panel-heading">
-          <h3>Structured draft</h3>
+          <div><span class="section-kicker">02 / Intelligence</span><h3>Structured draft</h3></div>
+          <span class="panel-mark">AI-assisted</span>
         </div>
         <div id="draftCard"></div>
       </section>
+      </section>
 
-      <section class="panel">
+      <section class="panel approval-panel">
         <div class="panel-heading">
-          <h3>Platform approval</h3>
+          <div><span class="section-kicker">03 / Distribution</span><h3>Choose where to publish</h3></div>
+          <span class="panel-mark">Human approval required</span>
         </div>
+        <p class="section-description">Select one or more channels for this draft. Nothing is published until you approve it.</p>
         <div id="platformList" class="platform-list"></div>
       </section>
 
       <section class="panel">
         <div class="panel-heading">
-          <h3>Platform versions</h3>
+          <div><span class="section-kicker">04 / Adaptations</span><h3>Platform versions</h3></div>
+          <span class="panel-mark">Ready for review</span>
         </div>
         <div id="versionList" class="version-list"></div>
       </section>
 
       <section class="panel">
         <div class="panel-heading">
-          <h3>Metrics and comments</h3>
+          <div><span class="section-kicker">05 / Insights</span><h3>Metrics and comments</h3></div>
+          <span class="panel-mark">Performance</span>
         </div>
         <div id="metricsList" class="metrics-list"></div>
       </section>
