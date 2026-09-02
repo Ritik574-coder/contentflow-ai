@@ -43,7 +43,8 @@
   - `src/ai/index.js`, `gemini.js`, `groq.js`, `workers-ai.js`, `manual.js`: Updated to validate outputs, respect timeouts, and attach clear provider metadata.
 - **Verification:**
   - Added `tests/ai.test.js` (15 comprehensive test cases covering primary success, failover, total fallback to manual, malformed JSON, timeout handling, and validation edge cases).
-  - Total test suite: 40/40 tests passing.
+  - Test suite (`npm test`): 40/40 tests passing (100% pass rate).
+  - Lint verification (`npm run lint`): Verified and passing with exit code 0.
   - `DRY_RUN` remains `true`.
 
 ---
