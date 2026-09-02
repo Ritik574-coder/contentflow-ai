@@ -109,6 +109,36 @@ function resolveApiBase() {
     : '';
 }
 
+// Phase 7: keep the dashboard token only in browser storage; never in source or URL.
+function resolveApiToken() {
+  try {
+    return sessionStorage.getItem('contentflow_api_token') || localStorage.getItem('contentflow_api_token') || '';
+  } catch {
+    return localStorage.getItem('contentflow_api_token') || '';
+  }
+}
+
+function persistApiToken(token) {
+  if (!token) return;
+  try {
+    sessionStorage.setItem('contentflow_api_token', token);
+    localStorage.setItem('contentflow_api_token', token);
+  } catch {
+    // Ignore storage quota/privacy restrictions; keep the token only in-memory if needed.
+  }
+}
+
+function ensureApiToken() {
+  let token = resolveApiToken();
+  if (!token) {
+    token = window.prompt('Enter the dashboard API token to approve content:', '') || '';
+    persistApiToken(token);
+  }
+  return token;
+}
+
+let apiToken = resolveApiToken();
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -271,9 +301,20 @@ els.publishSelected.addEventListener('click', async () => {
   els.publishSelected.textContent = 'Approving...';
 
   try {
+    apiToken = apiToken || ensureApiToken();
+    if (!apiToken) {
+      els.publishSelected.textContent = 'Token required';
+      els.publishSelected.disabled = false;
+      return;
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiToken}`,
+    };
     const response = await fetch(`${apiBase}/api/approval`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         contentId,
         selectedPlatforms: Array.from(selectedPlatforms),

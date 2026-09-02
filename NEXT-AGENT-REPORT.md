@@ -247,3 +247,35 @@ The DRY_RUN pipeline, Markdown-to-HTML conversion, and AI fallback/validation la
 | `NEXT-AGENT-REPORT.md` | Updated handoff report with Phase 6 completion and status |
 
 **Database changes:** None. No schema migrations needed.
+
+
+---
+
+# Phase 7 — COMPLETED (2026-09-02)
+
+## 7.1 Dashboard authentication hardening
+- `site/app.js` now caches the token only in browser storage and sends it as `Authorization: Bearer <token>` instead of URL query parameters.
+- `worker/index.js` enforces bearer-token checks for `POST /api/approval` whenever `DASHBOARD_API_TOKEN` is configured, returning HTTP 401 for missing or wrong credentials without echoing the secret.
+- Telegram webhook auth remains unchanged and continues to require the existing `X-Telegram-Bot-Api-Secret-Token` check.
+
+## 7.2 Content lifecycle status
+- `scripts/publish.js` tracks `content.status` as `publishing` during the job and resolves to `published` or `failed` at the end based on the outcome mix.
+- A partial failure still leaves the content in `published`; a total platform failure leaves it in `failed`.
+- `worker/telegram.js` updates the content row to `rejected` when a Telegram approval is rejected.
+
+## 7.3 Concurrency and idempotency
+- Approval transitions now use an atomic `UPDATE ... WHERE status = 'pending'` guard, preventing duplicate or race-driven approvals from both dispatching publishing jobs.
+- Duplicate dashboard approvals return HTTP 409 and only one concurrent request can trigger the workflow dispatch.
+- Platform idempotency remains intact via the existing idempotency-key checks in `scripts/publish.js`.
+
+## 7.4 Hermetic hardening tests
+- Added `tests/hardening.test.js` covering bearer auth rejection/acceptance, Telegram auth checks, publishing status outcomes, rejection handling, duplicate approval handling, concurrent dispatch protection, and existing platform idempotency.
+
+## 7.5 Verification
+- `npm test`: passed (51/51 tests)
+- `npm run lint`: passed
+- `DRY_RUN=true` remains in effect for all test and publish flows
+- Exact commit hash: e923c9f
+- Push status: success (git push origin main completed)
+- Remaining issues: none blocking Phase 7 completion
+

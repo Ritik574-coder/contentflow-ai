@@ -28,6 +28,16 @@ export async function updateApprovalStatus(db, id, status, decidedVia, decidedAt
   return info;
 }
 
+export async function transitionApprovalStatus(db, id, status, decidedVia, decidedAt = new Date().toISOString()) {
+  const info = await db.run(
+    `UPDATE approval_requests
+     SET status = ?, decided_via = ?, decided_at = ?
+     WHERE id = ? AND status = 'pending'`,
+    [status, decidedVia ?? null, decidedAt, id],
+  );
+  return Number(info && info.meta && info.meta.changes ? info.meta.changes : 0) > 0;
+}
+
 export async function upsertApprovalSelection(db, { approvalRequestId, platformId, selected }) {
   const existing = await db.first(
     `SELECT * FROM approval_selections WHERE approval_request_id = ? AND platform_id = ?`,

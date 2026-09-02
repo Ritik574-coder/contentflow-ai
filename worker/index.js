@@ -24,11 +24,33 @@ const json = (payload, status = 200, extraHeaders = {}) => new Response(
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-Telegram-Bot-Api-Secret-Token',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Telegram-Bot-Api-Secret-Token',
       ...extraHeaders,
     },
   },
 );
+
+// Phase 7: Minimal bearer-token auth for dashboard mutation endpoints.
+// If DASHBOARD_API_TOKEN is set in Worker secrets, the caller must supply:
+//   Authorization: Bearer <token>
+// Returns { ok: false, warn } when the env var is absent (backward-compatible).
+// Returns { ok: false, error, status: 401 } on mismatch.
+function checkDashboardAuth(request, env) {
+  const configured = env && env.DASHBOARD_API_TOKEN;
+  if (!configured) {
+    // Token not yet configured — allow but signal the gap.
+    return { ok: true, warn: 'DASHBOARD_API_TOKEN is not configured; endpoint is unauthenticated' };
+  }
+  const authHeader = request.headers.get('Authorization') || '';
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  const provided = match ? match[1] : '';
+  // Constant-time-equivalent comparison using === (single-user MVP; timing
+  // attack risk is negligible in this threat model).
+  if (!provided || provided !== configured) {
+    return { ok: false, status: 401, error: 'Unauthorized' };
+  }
+  return { ok: true };
+}
 
 export default {
   async fetch(request, env) {
@@ -80,6 +102,10 @@ export default {
 
       // ---- Dashboard approval + publish dispatch ----
       if (url.pathname === '/api/approval' && request.method === 'POST') {
+        // Phase 7: require DASHBOARD_API_TOKEN bearer auth for mutation.
+        const auth = checkDashboardAuth(request, env);
+        if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status || 401);
+
         const body = await request.json().catch(() => ({}));
         const contentId = Number(body.contentId);
         const selected = Array.isArray(body.selectedPlatforms) ? body.selectedPlatforms : [];
@@ -89,13 +115,14 @@ export default {
 
         const approval = await q.getLatestApprovalForContent(db, contentId);
         if (!approval) return json({ ok: false, error: 'No approval request found for this content' }, 404);
-        if (['approved', 'rejected', 'superseded'].includes(approval.status)) {
+
+        const transitioned = await q.transitionApprovalStatus(db, approval.id, 'approved', 'dashboard');
+        if (!transitioned) {
           return json({ ok: false, error: `Approval already decided (${approval.status}). A change requires a fresh approval.` }, 409);
         }
 
         await q.setSelectionsForApproval(db, approval.id, selected);
-        await q.updateApprovalStatus(db, approval.id, 'approved', 'dashboard');
-        logAudit(db, { entityType: 'approval_requests', entityId: approval.id, action: 'approval_received', result: 'success', actor: 'dashboard' });
+        await logAudit(db, { entityType: 'approval_requests', entityId: approval.id, action: 'approval_received', result: 'success', actor: 'dashboard' });
 
         const repo = repoFromEnv(env);
         let dispatch = { ok: false, error: 'GH_DISPATCH_PAT / GH_REPO_OWNER / GH_REPO_NAME not configured' };
@@ -109,7 +136,8 @@ export default {
           });
         }
 
-        return json({ ok: true, approval_id: approval.id, selectedPlatforms: selected, dispatch: dispatch.ok ? 'triggered' : dispatch.error });
+        const extraHeaders = auth.warn ? { 'X-Auth-Warning': auth.warn } : {};
+        return json({ ok: true, approval_id: approval.id, selectedPlatforms: selected, dispatch: dispatch.ok ? 'triggered' : dispatch.error }, 200, extraHeaders);
       }
 
       return json({ ok: false, error: 'Not found' }, 404);

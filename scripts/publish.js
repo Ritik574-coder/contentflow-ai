@@ -166,6 +166,8 @@ export async function main() {
   }
 
   await logAudit(db, { entityType: 'publishing_jobs', entityId: job.id, action: 'publishing_started', result: 'success' });
+  // Phase 7: mark content as actively publishing so status is no longer stale.
+  await q.updateContentStatus(db, content.id, 'publishing', content.current_version_id);
 
   const results = [];
   let failed = 0;
@@ -198,6 +200,13 @@ export async function main() {
   const jobStatus = failed === 0 ? 'completed' : 'completed_with_errors';
   await q.updatePublishingJob(db, job.id, { status: jobStatus, finished_at: new Date().toISOString() });
   await logAudit(db, { entityType: 'publishing_jobs', entityId: job.id, action: 'publishing_completed', result: jobStatus });
+
+  // Phase 7: update content.status to reflect final publish outcome.
+  // 'published'  → at least one platform succeeded (or all skipped via idempotency)
+  // 'failed'     → every attempted platform failed (no successful post recorded)
+  const allFailed = failed > 0 && results.every((r) => r.outcome === 'failed');
+  const finalContentStatus = allFailed ? 'failed' : 'published';
+  await q.updateContentStatus(db, content.id, finalContentStatus, content.current_version_id);
 
   await notifyPublishResult({ db, approvalId, results, jobStatus });
 

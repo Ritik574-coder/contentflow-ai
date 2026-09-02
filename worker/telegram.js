@@ -56,7 +56,12 @@ async function handleApprove({ db, env, approvalId, chatId, messageId, callbackI
     return;
   }
 
-  await q.updateApprovalStatus(db, approvalId, 'approved', 'telegram');
+  const transitioned = await q.transitionApprovalStatus(db, approvalId, 'approved', 'telegram');
+  if (!transitioned) {
+    await answerCallbackQuery(callbackId, 'This approval is already decided.', { env });
+    return;
+  }
+
   await logAudit(db, { entityType: 'approval_requests', entityId: approvalId, action: 'approval_received', result: 'success', actor: 'telegram' });
   await editMessageText(chatId, messageId, `✅ Approved — publishing to: ${selectedKeys.join(', ')}`, { env });
   await answerCallbackQuery(callbackId, `Approved for ${selectedKeys.join(', ')}`, { env });
@@ -112,7 +117,15 @@ async function handleReject({ db, env, approvalId, chatId, messageId, callbackId
     await answerCallbackQuery(callbackId, 'This approval is already decided.', { env });
     return;
   }
-  await q.updateApprovalStatus(db, approvalId, 'rejected', 'telegram');
+  const transitioned = await q.transitionApprovalStatus(db, approvalId, 'rejected', 'telegram');
+  if (!transitioned) {
+    await answerCallbackQuery(callbackId, 'This approval is already decided.', { env });
+    return;
+  }
+  const content = approval.content_id ? await q.getContent(db, approval.content_id) : null;
+  if (content) {
+    await q.updateContentStatus(db, content.id, 'rejected', approval.reviewed_version_id || content.current_version_id);
+  }
   await logAudit(db, { entityType: 'approval_requests', entityId: approvalId, action: 'approval_rejected', result: 'success', actor: 'telegram' });
   await editMessageText(chatId, messageId, '❌ Rejected — nothing was published.', { env });
   await answerCallbackQuery(callbackId, 'Rejected', { env });
