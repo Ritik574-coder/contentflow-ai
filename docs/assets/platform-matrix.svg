@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#312e81"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="900" height="480" fill="url(#bg)" rx="12"/>
+
+  <!-- Title -->
+  <text x="450" y="40" fill="#f8fafc" font-family="-apple-system, sans-serif" font-size="20" font-weight="700" text-anchor="middle">ContentFlow AI — Platform Capability &amp; Integration Matrix</text>
+  <text x="450" y="62" fill="#94a3b8" font-family="-apple-system, sans-serif" font-size="12" text-anchor="middle">Official API capabilities, enablement defaults, and feature support</text>
+
+  <!-- Table Header -->
+  <g transform="translate(40, 85)">
+    <rect width="820" height="36" fill="url(#headerGrad)" rx="6" stroke="#475569" stroke-width="1"/>
+    <text x="20" y="23" fill="#cbd5e1" font-family="sans-serif" font-size="12" font-weight="700">PLATFORM</text>
+    <text x="170" y="23" fill="#cbd5e1" font-family="sans-serif" font-size="12" font-weight="700">DEFAULT STATUS</text>
+    <text x="320" y="23" fill="#cbd5e1" font-family="sans-serif" font-size="12" font-weight="700">PUBLISHING API</text>
+    <text x="510" y="23" fill="#cbd5e1" font-family="sans-serif" font-size="12" font-weight="700">METRICS POLLING</text>
+    <text x="680" y="23" fill="#cbd5e1" font-family="sans-serif" font-size="12" font-weight="700">COMMENTS SYNC</text>
+  </g>
+
+  <!-- Row 1: Blogger -->
+  <g transform="translate(40, 130)">
+    <rect width="820" height="55" fill="#1e293b" rx="6" stroke="#334155" stroke-width="1"/>
+    <text x="20" y="32" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">🧡 Blogger</text>
+
+    <rect x="170" y="16" width="90" height="24" rx="12" fill="#065f46"/>
+    <text x="215" y="32" fill="#6ee7b7" font-family="sans-serif" font-size="11" font-weight="700" text-anchor="middle">ENABLED</text>
+
+    <text x="320" y="32" fill="#e2e8f0" font-family="sans-serif" font-size="12">Full Post (HTML)</text>
+
+    <rect x="510" y="16" width="110" height="24" rx="12" fill="#451a03"/>
+    <text x="565" y="32" fill="#fde68a" font-family="sans-serif" font-size="11" font-weight="600" text-anchor="middle">GA4 (Add-on)</text>
+
+    <rect x="680" y="16" width="100" height="24" rx="12" fill="#065f46"/>
+    <text x="730" y="32" fill="#6ee7b7" font-family="sans-serif" font-size="11" font-weight="700" text-anchor="middle">Official API</text>
+  </g>
+
+  <!-- Row 2: LinkedIn -->
+  <g transform="translate(40, 195)">
+    <rect width="820" height="55" fill="#1e293b" rx="6" stroke="#334155" stroke-width="1"/>
+    <text x="20" y="32" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">💙 LinkedIn</text>
+
+    <rect x="170" y="16" width="90" height="24" rx="12" fill="#065f46"/>
+    <text x="215" y="32" fill="#6ee7b7" font-family="sans-serif" font-size="11" font-weight="700" text-anchor="middle">ENABLED</text>
+
+    <text x="320" y="32" fill="#e2e8f0" font-family="sans-serif" font-size="12">UGC Post (Text/Link)</text>
+
+    <rect x="510" y="16" width="110" height="24" rx="12" fill="#7f1d1d"/>
+    <text x="565" y="32" fill="#fca5a5" font-family="sans-serif" font-size="11" font-weight="600" text-anchor="middle">Partner-Gated</text>
+
+    <rect x="680" y="16" width="100" height="24" rx="12" fill="#7f1d1d"/>
+    <text x="730" y="32" fill="#fca5a5" font-family="sans-serif" font-size="11" font-weight="600" text-anchor="middle">Unsupported</text>
+  </g>
+
+  <!-- Row 3: DEV.to -->
+  <g transform="translate(40, 260)">
+    <rect width="820" height="55" fill="#1e293b" rx="6" stroke="#334155" stroke-width="1"/>
+    <text x="20" y="32" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">🖤 DEV.to</text>
+
+    <rect x="170" y="16" width="90" height="24" rx="12" fill="#065f46"/>
+    <text x="215" y="32" fill="#6ee7b7" font-family="sans-serif" font-size="11" font-weight="700" text-anchor="middle">ENABLED</text>
+
+    <text x="320" y="32" fill="#e2e8f0" font-family="sans-serif" font-size="12">Markdown + Tags</text>
+
+    <rect x="510" y="16" width="110" height="24" rx="12" fill="#065f46"/>
+    <text x="565" y="32" fill="#6ee7b7" font-family="sans-serif" font-size="11" font-weight="700" text-anchor="middle">Best Effort API</text>
+
+    <rect x="680" y="16" width="100" height="24" rx="12" fill="#334155"/>
+    <text x="730" y="32" fill="#cbd5e1" font-family="sans-serif" font-size="11" font-weight="600" text-anchor="middle">None</text>
+  </g>
+
+  <!-- Row 4: Hashnode -->
+  <g transform="translate(40, 325)">
+    <rect width="820" height="55" fill="#1e293b" rx="6" stroke="#334155" stroke-width="1" opacity="0.7"/>
+    <text x="20" y="32" fill="#94a3b8" font-family="sans-serif" font-size="14" font-weight="700">💜 Hashnode</text>
+
+    <rect x="170" y="16" width="90" height="24" rx="12" fill="#334155"/>
+    <text x="215" y="32" fill="#94a3b8" font-family="sans-serif" font-size="11" font-weight="700" text-anchor="middle">DISABLED</text>
+
+    <text x="320" y="32" fill="#64748b" font-family="sans-serif" font-size="12">GraphQL (Pro Only)</text>
+
+    <rect x="510" y="16" width="110" height="24" rx="12" fill="#334155"/>
+    <text x="565" y="32" fill="#64748b" font-family="sans-serif" font-size="11" font-weight="600" text-anchor="middle">Disabled</text>
+
+    <rect x="680" y="16" width="100" height="24" rx="12" fill="#334155"/>
+    <text x="730" y="32" fill="#64748b" font-family="sans-serif" font-size="11" font-weight="600" text-anchor="middle">Disabled</text>
+  </g>
+
+  <!-- Row 5: X (Twitter) -->
+  <g transform="translate(40, 390)">
+    <rect width="820" height="55" fill="#1e293b" rx="6" stroke="#334155" stroke-width="1" opacity="0.7"/>
+    <text x="20" y="32" fill="#94a3b8" font-family="sans-serif" font-size="14" font-weight="700">🤍 X / Twitter</text>
+
+    <rect x="170" y="16" width="90" height="24" rx="12" fill="#334155"/>
+    <text x="215" y="32" fill="#94a3b8" font-family="sans-serif" font-size="11" font-weight="700" text-anchor="middle">DISABLED</text>
+
+    <text x="320" y="32" fill="#64748b" font-family="sans-serif" font-size="12">v2 API (Pay-per-use)</text>
+
+    <rect x="510" y="16" width="110" height="24" rx="12" fill="#334155"/>
+    <text x="565" y="32" fill="#64748b" font-family="sans-serif" font-size="11" font-weight="600" text-anchor="middle">Disabled</text>
+
+    <rect x="680" y="16" width="100" height="24" rx="12" fill="#334155"/>
+    <text x="730" y="32" fill="#64748b" font-family="sans-serif" font-size="11" font-weight="600" text-anchor="middle">Disabled</text>
+  </g>
+</svg>
