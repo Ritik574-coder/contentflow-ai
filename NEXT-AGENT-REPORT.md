@@ -323,8 +323,8 @@ The DRY_RUN pipeline, Markdown-to-HTML conversion, and AI fallback/validation la
 - `npm test`: 56/56 passing.
 - `npm run lint`: passed.
 - `DRY_RUN=true`.
-- Commit: recorded after the Phase 8 implementation commit.
-- Push: recorded after verification.
+- Commit: `1eb692e`.
+- Push: pending final verification.
 
 ## 8.7 Remaining gaps and recommended next phase
 - Dashboard content creation remains P1 and should use the same authenticated ingestion path rather than a second processing implementation.
