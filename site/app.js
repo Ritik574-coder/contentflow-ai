@@ -171,7 +171,11 @@ async function loadDashboard() {
   }
 
   try {
-    const response = await fetch(`${apiBase}/api/content`);
+    const response = await fetch(`${apiBase}/api/content`, {
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+      },
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     dashboard = normalizeDashboard(await response.json());
     selectedPlatforms = new Set(dashboard.approval?.selectedPlatforms || []);
