@@ -171,6 +171,17 @@ async function loadDashboard() {
   }
 
   try {
+    apiToken = apiToken || ensureApiToken();
+
+    if (!apiToken) {
+      dashboard = fallbackDashboard;
+      selectedPlatforms = new Set();
+      els.connectionStatus.textContent = 'Authentication required';
+      els.connectionStatus.className = 'badge warning';
+      render();
+      return;
+    }
+
     const response = await fetch(`${apiBase}/api/content`, {
       headers: {
         Authorization: `Bearer ${apiToken}`,
