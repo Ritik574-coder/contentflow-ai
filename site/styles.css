@@ -28,7 +28,8 @@ h4 { margin-bottom: .5rem; font-size: 1.1rem; }
   background: rgba(8,13,24,.78); backdrop-filter: blur(18px);
 }
 .brand { display: inline-flex; align-items: center; gap: .7rem; color: var(--ink); text-decoration: none; }
-.brand-mark { display: grid; place-items: center; width: 2.35rem; height: 2.35rem; color: var(--accent-bright); border: 1px solid rgba(155,140,255,.45); border-radius: 11px; background: linear-gradient(145deg, rgba(155,140,255,.25), rgba(85,214,176,.1)); box-shadow: 0 0 24px rgba(155,140,255,.16); }
+.brand-mark { display: grid; place-items: center; width: 2.35rem; height: 2.35rem; overflow: hidden; color: var(--accent-bright); border: 1px solid rgba(155,140,255,.45); border-radius: 11px; background: linear-gradient(145deg, rgba(155,140,255,.25), rgba(85,214,176,.1)); box-shadow: 0 0 24px rgba(155,140,255,.16); }
+.brand-mark img { display: block; width: 100%; height: 100%; }
 .brand strong, .brand small { display: block; }
 .brand strong { font-size: 1rem; }
 .brand small { color: var(--muted); font-size: .67rem; letter-spacing: .03em; }
