@@ -20,14 +20,14 @@ flowchart TD
 
     subgraph AI_Engine ["2. AI Fallback Engine"]
         GHA_PROC --> AI_CHAIN{"🤖 AI Provider Chain"}
-        AI_CHAIN -- 1. Primary --> GPT4["OpenAI GPT-4o"]
-        AI_CHAIN -- 2. Secondary --> CLAUDE["Anthropic Claude 3.5"]
-        AI_CHAIN -- 3. Tertiary --> GEMINI["Google Gemini 1.5"]
+        AI_CHAIN -- 1. Primary --> GEMINI["Google Gemini 1.5"]
+        AI_CHAIN -- 2. Secondary --> GROQ["Groq (Llama 3.1)"]
+        AI_CHAIN -- 3. Tertiary --> WORKERS_AI["Cloudflare Workers AI"]
         AI_CHAIN -- 4. Fallback --> MANUAL["Manual / Rule-Based Engine"]
     end
 
     subgraph Storage_Approval ["3. Storage & Human Approval"]
-        GPT4 & CLAUDE & GEMINI & MANUAL --> D1_DRAFT[("💾 Cloudflare D1 (Pending Drafts)")]
+        GEMINI & GROQ & WORKERS_AI & MANUAL --> D1_DRAFT[("💾 Cloudflare D1 (Pending Drafts)")]
         D1_DRAFT --> TG_BOT["💬 Telegram Bot Webhook"]
         TG_BOT --> HUMAN["👤 Content Owner (Interactive Review)"]
     end
@@ -52,7 +52,7 @@ flowchart TD
     classDef publish fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#fff;
 
     class RAW,GHA_PROC primary;
-    class AI_CHAIN,GPT4,CLAUDE,GEMINI,MANUAL ai;
+    class AI_CHAIN,GEMINI,GROQ,WORKERS_AI,MANUAL ai;
     class D1_DRAFT,TG_BOT,HUMAN approval;
     class GHA_PUB,BLOGGER,LINKEDIN,DEVTO,GHA_METRICS,D1_METRICS,WORKER_API,DASHBOARD publish;
 ```
@@ -61,7 +61,7 @@ flowchart TD
 
 ## ✨ Key Features & Capabilities
 
-- 🤖 **Swappable AI Provider Chain**: Automatic runtime fallback across OpenAI (GPT-4o), Anthropic (Claude 3.5), Google Gemini (1.5), and a zero-credential deterministic manual parser.
+- 🤖 **Swappable AI Provider Chain**: Automatic runtime fallback across Google Gemini (1.5 Flash), Groq (Llama 3.1), Cloudflare Workers AI, and a zero-credential deterministic manual parser.
 - 💬 **Interactive Telegram Approval**: Review AI-structured drafts directly in Telegram with per-platform toggle buttons before any external API call is dispatched.
 - 🛡️ **Strict Human-in-the-Loop Safeguards**: Posts remain safely stored in draft status until explicit user authorization.
 - 🔑 **Idempotency Guarantee**: Deterministic SHA-256 idempotency keying prevents duplicate publishing across automated retries or worker restarts.
@@ -115,11 +115,11 @@ ContentFlow AI features a resilient provider fallback system. If an API provider
 
 ```mermaid
 graph TD
-    A[Raw Input Text] --> B{Try OpenAI GPT-4o}
+    A[Raw Input Text] --> B{Try Google Gemini 1.5}
     B -- Success --> S[Structured Draft Object]
-    B -- Failure / Rate Limit --> C{Try Anthropic Claude 3.5}
+    B -- Failure / Rate Limit --> C{Try Groq Llama 3.1}
     C -- Success --> S
-    C -- Failure / Timeout --> D{Try Google Gemini 1.5}
+    C -- Failure / Timeout --> D{Try Cloudflare Workers AI}
     D -- Success --> S
     D -- Failure / No API Keys --> E[Deterministic Manual Fallback Engine]
     E --> S
@@ -129,10 +129,10 @@ graph TD
 
 | Priority | Provider | Model | Fallback Trigger |
 | :---: | :--- | :--- | :--- |
-| **1** | **OpenAI** | `gpt-4o` | Rate limit (429), API outage (5xx), invalid key |
-| **2** | **Anthropic** | `claude-3-5-sonnet` | Network timeout, payload error |
-| **3** | **Google** | `gemini-1.5-flash` | Quota exceeded |
-| **4** | **Manual** | Rule-Based Regex / Parser | Zero API keys configured or total cloud failure |
+| **1** | **Google Gemini** | `gemini-1.5-flash` | Rate limit (429), API outage (5xx), invalid/unset key |
+| **2** | **Groq** | `llama-3.1-8b-instant` | Network timeout, rate limit, payload error |
+| **3** | **Cloudflare Workers AI** | `@cf/meta/llama-3.1-8b-instruct` | Quota exceeded, endpoint error |
+| **4** | **Manual** | Rule-Based Extractor | Zero API keys configured, total cloud failure, or explicit `AI_PROVIDER=manual` |
 
 ---
 
@@ -297,12 +297,14 @@ Copy `.env.example` to `.env`:
 ```bash
 # General Pipeline Configuration
 DRY_RUN=true               # When true, simulates all publishing without making real API calls
-AI_PROVIDER=manual         # Set to 'auto', 'openai', 'anthropic', 'gemini', or 'manual'
+AI_PROVIDER=manual         # Set to 'auto', 'gemini', 'groq', 'workers_ai', or 'manual'
+AI_PROVIDER_ORDER=gemini,groq,workers_ai,manual
 
 # AI Provider Credentials (Optional if using manual mode)
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
 GEMINI_API_KEY=AIzaSy...
+GROQ_API_KEY=gsk_...
+CF_API_TOKEN=...
+CF_ACCOUNT_ID=...
 
 # Telegram Approval Bot
 TELEGRAM_BOT_TOKEN=123456789:ABC...

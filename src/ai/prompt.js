@@ -17,13 +17,33 @@ Raw notes:
 `;
 
 export function extractJson(rawText) {
-  // The model may wrap JSON in ```json ... ``` fences; strip them.
-  const cleaned = String(rawText ?? '')
-    .replace(/```(?:json)?/g, '')
-    .trim();
+  if (rawText == null) return null;
+  const str = String(rawText).trim();
+  if (!str) return null;
+
+  // 1. Direct parse attempt
   try {
-    return JSON.parse(cleaned);
-  } catch {
-    return null;
+    return JSON.parse(str);
+  } catch {}
+
+  // 2. Strip standard ```json ... ``` markdown fences
+  const cleanedFences = str
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+  try {
+    return JSON.parse(cleanedFences);
+  } catch {}
+
+  // 3. Find outermost JSON object {...} if surrounded by conversational commentary
+  const start = str.indexOf('{');
+  const end = str.lastIndexOf('}');
+  if (start !== -1 && end !== -1 && end > start) {
+    try {
+      return JSON.parse(str.slice(start, end + 1));
+    } catch {}
   }
+
+  return null;
 }

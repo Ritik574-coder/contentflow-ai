@@ -2,12 +2,13 @@
 //   gemini -> groq -> workers_ai -> manual
 // Any provider may be omitted by leaving its API key unset; the chain advances
 // to the next one. If every AI provider fails, `manual` still produces a
-// usable structured draft (aiProvider === null), so the human can edit it.
+// usable structured draft, so the human can edit it.
 
 import { generateWithGemini } from './gemini.js';
 import { generateWithGroq } from './groq.js';
 import { generateWithWorkersAI } from './workers-ai.js';
 import { generateManual } from './manual.js';
+import { validateDraft } from './validation.js';
 
 const PROVIDERS = {
   gemini: generateWithGemini,
@@ -18,7 +19,7 @@ const PROVIDERS = {
 
 const DEFAULT_ORDER = 'gemini,groq,workers_ai,manual';
 
-// Returns a draft object directly (not a Result). Throws-free: on total
+// Returns a validated draft object directly (not a Result). Throws-free: on total
 // failure it falls back to the manual generator.
 export async function processContent(rawText, opts = {}) {
   const explicit = opts.provider || process.env.AI_PROVIDER;
@@ -32,18 +33,27 @@ export async function processContent(rawText, opts = {}) {
 
   for (const name of order) {
     const generator = PROVIDERS[name];
-    if (!generator) continue;
+    if (!generator) {
+      errors.push({ provider: name, error: `unknown provider: ${name}` });
+      continue;
+    }
     try {
       const result = await generator(String(rawText ?? ''), opts);
       if (result && result.ok && result.data) {
-        const body = String(result.data.body ?? '').trim();
-        if (!body) {
-          errors.push({ provider: name, error: 'provider returned an empty body' });
+        const validation = validateDraft(result.data);
+        if (!validation.ok) {
+          errors.push({ provider: name, error: `validation failed: ${validation.error}` });
           continue;
         }
-        return { ...result.data, aiProvider: name };
+        return {
+          ...validation.data,
+          aiProvider: name,
+          ...(errors.length ? { fallbackReason: 'prior_providers_failed', providerErrors: errors } : {}),
+        };
       }
-      if (result && result.error) errors.push({ provider: name, error: result.error });
+      if (result && result.error) {
+        errors.push({ provider: name, error: result.error });
+      }
     } catch (e) {
       errors.push({ provider: name, error: String((e && e.message) || e) });
     }
@@ -53,7 +63,7 @@ export async function processContent(rawText, opts = {}) {
   const manual = await generateManual(String(rawText ?? ''), opts);
   return {
     ...manual.data,
-    aiProvider: null,
+    aiProvider: 'manual',
     fallbackReason: 'all_ai_providers_failed',
     providerErrors: errors,
   };

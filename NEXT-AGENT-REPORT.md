@@ -1,6 +1,6 @@
 # ContentFlow AI — Next Agent Handoff Report
 
-**Last updated:** 2026-09-02 (Phase 5 — Blogger Markdown to HTML Conversion)  
+**Last updated:** 2026-09-02 (Phase 6 — AI Processing Layer Audit, Validation & Failover Hardening)  
 **Repo:** https://github.com/Ritik574-coder/contentflow-ai  
 **Dashboard:** https://ritik574-coder.github.io/contentflow-ai/  
 **Worker API:** https://contentflow-ai.ritik574-coder.workers.dev
@@ -11,8 +11,9 @@
 
 | Area | Status |
 |---|---|
-| Application code (MVP) | ~99% — implemented |
-| Automated tests | 25/25 passing (11 new tests added) |
+| Application code (MVP) | 100% — complete & verified |
+| Automated tests | 40/40 passing (15 new AI tests added) |
+| AI Processing & Fallback Chain | Hardened with schema validation, timeouts, resilient JSON parsing |
 | Markdown → HTML for Blogger | Fully converted & sanitized with `marked` + `sanitize-html` |
 | GitHub Pages dashboard | Live |
 | Cloudflare D1 | Live, migrations 001–008 applied |
@@ -21,9 +22,29 @@
 | Telegram Bot + webhook | Configured and verified (Phase 3) |
 | Full DRY_RUN E2E (Telegram path) | Verified (Phase 3) |
 | Phase 4 baseline re-verification | Completed |
-| Phase 5 Markdown to HTML Fix | Completed & verified (all 25 tests pass) |
+| Phase 5 Markdown to HTML Fix | Completed & verified (25 tests pass) |
+| Phase 6 AI Layer Completion | Completed & verified (40 tests pass) |
 | Real platform publishing | Controlled test previously verified; DRY_RUN returned to TRUE |
-| Production readiness | ~95% |
+| Production readiness | ~98% |
+
+---
+
+# Phase 6 — COMPLETED (2026-09-02)
+
+## 6.1 AI Layer Audit & Implementation Alignment
+- **Audit findings:** 
+  - Code implemented providers: `gemini` (`src/ai/gemini.js`), `groq` (`src/ai/groq.js`), `workers_ai` (`src/ai/workers-ai.js`), and `manual` (`src/ai/manual.js`).
+  - Documented in older diagrams: `OpenAI` and `Anthropic` were documented but not implemented in `src/ai/`.
+  - Documentation updated to accurately reflect actual architecture: `Google Gemini 1.5 -> Groq Llama 3.1 -> Cloudflare Workers AI -> Manual fallback`.
+- **Hardening implemented:**
+  - `src/ai/validation.js`: Structured output validation (`validateDraft`) ensuring `title` and `body` are non-empty and all fields conform to types.
+  - `src/ai/prompt.js`: Resilient `extractJson` extracting JSON even when surrounded by LLM commentary or markdown fences.
+  - `src/shared/http.js`: Added `timeoutMs` / signal support to prevent hanging API calls in CI.
+  - `src/ai/index.js`, `gemini.js`, `groq.js`, `workers-ai.js`, `manual.js`: Updated to validate outputs, respect timeouts, and attach clear provider metadata.
+- **Verification:**
+  - Added `tests/ai.test.js` (15 comprehensive test cases covering primary success, failover, total fallback to manual, malformed JSON, timeout handling, and validation edge cases).
+  - Total test suite: 40/40 tests passing.
+  - `DRY_RUN` remains `true`.
 
 ---
 
@@ -39,7 +60,6 @@
 - **Verification:** 
   - Added unit test suite `tests/markdown.test.js` covering headings, bold/italic, lists, links, images, blockquotes, code blocks, tables, multiline paragraphs, and XSS attack vectors.
   - Added BloggerAdapter unit tests in `tests/adapters.test.js` validating the HTML conversion in HTTP request payloads.
-  - Full test suite: 25/25 tests passing.
   - `DRY_RUN` remains `true`.
 
 ---
@@ -176,7 +196,8 @@ Do NOT set `DRY_RUN=false` until:
 # Verification Baseline
 
 ```bash
-npm test                                    # expect 25/25 pass
+npm test                                    # expect 40/40 pass
+npm run lint                                # expect pass with code 0
 curl -s https://contentflow-ai.ritik574-coder.workers.dev/api/health
 npx wrangler secret list
 npx wrangler d1 execute contentflow-ai --remote --command "SELECT id, status FROM content ORDER BY id DESC LIMIT 5;"
@@ -204,19 +225,24 @@ Do NOT rebuild the project. Do NOT redesign the architecture.
 
 This project is developed by multiple AI agents. Treat the repository and this handoff report as the existing project state. **Never rebuild completed functionality from scratch.**
 
-The DRY_RUN pipeline and Markdown-to-HTML conversion are fully verified.
+The DRY_RUN pipeline, Markdown-to-HTML conversion, and AI fallback/validation layers are fully verified.
 
 ---
 
-# Files changed in Phase 5
+# Files changed in Phase 6
 
 | File | Change |
 |---|---|
-| `package.json` | Added `marked` and `sanitize-html` dependencies |
-| `src/shared/markdown.js` | Created `markdownToHtml` converter with XSS sanitization |
-| `src/platforms/blogger/adapter.js` | Converted Markdown to HTML in `createDraft()` and `publish()` |
-| `tests/markdown.test.js` | Added unit test suite for Markdown to HTML conversion & XSS prevention |
-| `tests/adapters.test.js` | Added BloggerAdapter tests verifying HTML conversion on draft & publish |
-| `NEXT-AGENT-REPORT.md` | Updated handoff report with Phase 5 completion and status |
+| `src/ai/validation.js` | **New**: Added `validateDraft` helper for structured AI output validation |
+| `src/ai/prompt.js` | Enhanced `extractJson` with markdown-fence and commentary parsing |
+| `src/shared/http.js` | Added `timeoutMs` / `signal` support in `httpJson` |
+| `src/ai/gemini.js` | Integrated `validateDraft` and timeout handling |
+| `src/ai/groq.js` | Integrated `validateDraft` and timeout handling |
+| `src/ai/workers-ai.js` | Integrated `validateDraft` and timeout handling |
+| `src/ai/manual.js` | Integrated `validateDraft` ensuring schema compliance |
+| `src/ai/index.js` | Hardened fallback loop with validation, error capture, and clear metadata |
+| `tests/ai.test.js` | **New**: 15 unit tests covering providers, fallback chain, timeouts, and validation |
+| `README.md` | Updated architecture diagrams, provider matrix, and env vars to match real code |
+| `NEXT-AGENT-REPORT.md` | Updated handoff report with Phase 6 completion and status |
 
 **Database changes:** None. No schema migrations needed.
