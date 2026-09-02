@@ -17,7 +17,7 @@ import { triggerWorkflowDispatch, repoFromEnv } from '../src/github.js';
 import { logAudit } from '../src/shared/logger.js';
 
 const json = (payload, status = 200, extraHeaders = {}) => new Response(
-  JSON.stringify(payload),
+  status === 204 ? null : JSON.stringify(payload),
   {
     status,
     headers: {
