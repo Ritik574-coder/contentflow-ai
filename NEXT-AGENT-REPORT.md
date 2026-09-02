@@ -286,3 +286,47 @@ The DRY_RUN pipeline, Markdown-to-HTML conversion, and AI fallback/validation la
 - Exact Phase 7 commit hash: 71ee4ebb5e0e427d0af7146430230b36394cb6a4
 - Push status: successful after the CI fix
 - Remaining issues: none blocking Phase 7 completion
+
+# Phase 8 — UNIFIED CONTENT INGESTION (2026-09-02)
+
+## 8.1 Current behavior before Phase 8
+- Content processing was available through the existing `process-content.yml` workflow, but a content owner had to start it manually.
+- Telegram handled approval callbacks and sent a hint for ordinary messages; it did not submit content to the processing pipeline.
+- The existing AI, D1, review, approval, and publishing stages were retained unchanged.
+
+## 8.2 Telegram ingestion and automatic processing
+- Ordinary non-command Telegram text is treated as a content submission.
+- `/new` is supported; the command is removed and the remaining text is submitted.
+- Empty `/new` messages are rejected with a short usage message and are not dispatched.
+- Valid submissions receive a safe acknowledgement and trigger the existing `process-content.yml` workflow with its established `raw_text` input.
+- No AI or content-processing logic was duplicated in the Worker.
+
+## 8.3 Dispatch and duplicate protection
+- `workflow_dispatch` was selected because `process-content.yml` already declares the required `raw_text` input and already supports this trigger.
+- GitHub dispatch continues to use the Worker-only `GH_DISPATCH_PAT`; it is never included in Telegram responses or callback data.
+- Migration `009_telegram_ingestion.sql` adds a small unique Telegram update record. An atomic `INSERT OR IGNORE` claim ensures a webhook retry or concurrent duplicate dispatches the processing workflow only once.
+- Dispatch failures are recorded and return a safe retry message without exposing GitHub error details.
+
+## 8.4 Dashboard and media status
+- Dashboard ingestion was deferred (P1); the existing dashboard approval/read path remains unchanged.
+- No media storage, transcoding, or platform media distribution was added. Existing Markdown image handling remains available through the current Blogger Markdown-to-HTML sanitizer. Video handling and general media distribution remain future work.
+
+## 8.5 Security and compatibility
+- Telegram webhook secret validation, dashboard bearer authentication, GitHub secret handling, callback-data boundaries, and `DRY_RUN=true` were preserved.
+- Existing approval callbacks continue to use the established callback protocol and human approval gate.
+
+## 8.6 Phase 8 files and verification
+- Added `migrations/009_telegram_ingestion.sql`.
+- Added `src/db/queries/ingestion.js` and exported its claim/update helpers.
+- Updated `worker/telegram.js` for direct text and `/new` ingestion.
+- Added hermetic ingestion, dispatch payload, safe-error, empty-input, and duplicate-delivery tests to `tests/hardening.test.js`.
+- `npm test`: 56/56 passing.
+- `npm run lint`: passed.
+- `DRY_RUN=true`.
+- Commit: recorded after the Phase 8 implementation commit.
+- Push: recorded after verification.
+
+## 8.7 Remaining gaps and recommended next phase
+- Dashboard content creation remains P1 and should use the same authenticated ingestion path rather than a second processing implementation.
+- Telegram submissions currently accept text/topics only; media attachments and video workflows remain out of scope.
+- Recommended next phase: add a small authenticated dashboard submission endpoint/UI and then separately design media handling.

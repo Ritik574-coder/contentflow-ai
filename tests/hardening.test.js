@@ -274,3 +274,147 @@ test('existing platform idempotency still works', async () => {
   assert.equal(second.outcome, 'skipped');
   assert.equal(dryRun, true);
 });
+
+function telegramMessageUpdate(text, updateId = 9001) {
+  return {
+    update_id: updateId,
+    message: {
+      message_id: updateId,
+      chat: { id: 101 },
+      text,
+    },
+  };
+}
+
+function telegramDispatchEnv() {
+  return {
+    TELEGRAM_BOT_TOKEN: 'telegram-test-token',
+    GH_REPO_OWNER: 'demo-owner',
+    GH_REPO_NAME: 'demo-repo',
+    GH_DISPATCH_PAT: 'github-test-token',
+  };
+}
+
+test('Telegram content messages trigger the existing processing workflow', async () => {
+  const db = createTestDb();
+  const requests = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options = {}) => {
+    requests.push({ url, options });
+    return new Response(JSON.stringify({ ok: true, result: true }), { status: 200 });
+  };
+
+  try {
+    const result = await handleTelegramUpdate(
+      db,
+      telegramMessageUpdate('Snowflake VARIANT and FLATTEN explained for beginners.'),
+      telegramDispatchEnv(),
+    );
+    assert.equal(result.action, 'content_submission');
+    assert.equal(requests.length, 2);
+    const dispatch = requests.find((request) => request.url.includes('/actions/workflows/process-content.yml/dispatches'));
+    assert.ok(dispatch);
+    assert.deepEqual(JSON.parse(dispatch.options.body).inputs, {
+      raw_text: 'Snowflake VARIANT and FLATTEN explained for beginners.',
+    });
+    assert.match(JSON.parse(requests.find((request) => request.url.includes('/sendMessage')).options.body).text, /Processing has started/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('/new Telegram submissions strip the command before dispatch', async () => {
+  const db = createTestDb();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options = {}) => {
+    if (url.includes('/dispatches')) {
+      assert.equal(JSON.parse(options.body).inputs.raw_text, 'A topic after the command.');
+    }
+    return new Response(JSON.stringify({ ok: true, result: true }), { status: 200 });
+  };
+
+  try {
+    const result = await handleTelegramUpdate(
+      db,
+      telegramMessageUpdate('/new\nA topic after the command.', 9002),
+      telegramDispatchEnv(),
+    );
+    assert.equal(result.action, 'content_submission');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('empty Telegram submissions are rejected without dispatching', async () => {
+  const db = createTestDb();
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return new Response(JSON.stringify({ ok: true, result: true }), { status: 200 });
+  };
+
+  try {
+    const result = await handleTelegramUpdate(
+      db,
+      telegramMessageUpdate('/new', 9003),
+      telegramDispatchEnv(),
+    );
+    assert.equal(result.action, 'content_submission_empty');
+    assert.equal(calls, 1);
+    assert.equal((await db.first('SELECT COUNT(*) AS count FROM telegram_ingestions')).count, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('Telegram dispatch failures return a safe message and no secret', async () => {
+  const db = createTestDb();
+  const originalFetch = globalThis.fetch;
+  const bodies = [];
+  globalThis.fetch = async (url, options = {}) => {
+    bodies.push({ url, body: options.body });
+    if (url.includes('/dispatches')) return new Response('GitHub failure details', { status: 500 });
+    return new Response(JSON.stringify({ ok: true, result: true }), { status: 200 });
+  };
+
+  try {
+    const result = await handleTelegramUpdate(
+      db,
+      telegramMessageUpdate('A submission that cannot start.', 9004),
+      telegramDispatchEnv(),
+    );
+    assert.equal(result.action, 'content_submission_failed');
+    const message = JSON.parse(bodies.find((entry) => entry.url.includes('/sendMessage')).body).text;
+    assert.match(message, /couldn’t start processing/);
+    assert.doesNotMatch(message, /github-test-token|GitHub failure details/);
+    const ingestion = await db.first('SELECT status FROM telegram_ingestions WHERE telegram_update_id = ?', ['9004']);
+    assert.equal(ingestion.status, 'failed');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('duplicate Telegram webhook delivery dispatches only once', async () => {
+  const db = createTestDb();
+  const originalFetch = globalThis.fetch;
+  let dispatches = 0;
+  globalThis.fetch = async (url) => {
+    if (url.includes('/dispatches')) dispatches += 1;
+    return new Response(JSON.stringify({ ok: true, result: true }), { status: 200 });
+  };
+
+  try {
+    const update = telegramMessageUpdate('Deliver this only once.', 9005);
+    const results = await Promise.all([
+      handleTelegramUpdate(db, update, telegramDispatchEnv()),
+      handleTelegramUpdate(db, update, telegramDispatchEnv()),
+    ]);
+    assert.equal(dispatches, 1);
+    assert.equal(results.filter((result) => result.action === 'content_submission').length, 1);
+    assert.equal(results.filter((result) => result.action === 'content_submission_duplicate').length, 1);
+    assert.equal((await db.query('SELECT * FROM telegram_ingestions')).length, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

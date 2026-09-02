@@ -1,4 +1,4 @@
-// Telegram webhook update handler: inline-keyboard approval flow.
+// Telegram webhook update handler: content ingestion and inline-keyboard approval flow.
 // callback_data: toggle:<approvalId>:<platformKey> | approve:<approvalId> | reject:<approvalId>
 import q from '../src/db/queries/index.js';
 import { answerCallbackQuery, editMessageReplyMarkup, editMessageText, sendMessage } from '../src/telegram/client.js';
@@ -7,6 +7,74 @@ import { triggerWorkflowDispatch, repoFromEnv } from '../src/github.js';
 import { logAudit } from '../src/shared/logger.js';
 
 const DECIDED = new Set(['approved', 'rejected', 'superseded']);
+
+function submissionText(message) {
+  const text = String(message && message.text || '').trim();
+  if (!text) return '';
+  if (/^\/new(?:@\w+)?(?:\s|$)/i.test(text)) {
+    return text.replace(/^\/new(?:@\w+)?\s*/i, '').trim();
+  }
+  if (text.startsWith('/')) return '';
+  return text;
+}
+
+function telegramSubmissionKey(update, message) {
+  if (update.update_id != null) return String(update.update_id);
+  return `${message.chat.id}:${message.message_id}`;
+}
+
+async function handleContentSubmission({ db, env, update, message, text }) {
+  if (!text) {
+    await sendMessage(message.chat.id, 'Send a topic or notes after /new, or send the content directly.', { env });
+    return { handled: true, action: 'content_submission_empty' };
+  }
+
+  const telegramUpdateId = telegramSubmissionKey(update, message);
+  const claim = await q.claimTelegramIngestion(db, {
+    telegramUpdateId,
+    chatId: message.chat.id,
+    messageId: message.message_id,
+    rawText: text,
+  });
+  if (!claim.claimed) {
+    await sendMessage(message.chat.id, '✅ This content submission was already received.', { env });
+    return { handled: true, action: 'content_submission_duplicate' };
+  }
+
+  const repo = repoFromEnv(env);
+  const dispatch = repo
+    ? await triggerWorkflowDispatch({
+      ...repo,
+      workflow: 'process-content.yml',
+      inputs: { raw_text: text },
+      token: env.GH_DISPATCH_PAT,
+      ref: env.GH_DISPATCH_REF,
+    })
+    : { ok: false, error: 'Processing workflow is not configured' };
+
+  if (!dispatch.ok) {
+    await q.updateTelegramIngestion(db, telegramUpdateId, 'failed');
+    await logAudit(db, {
+      entityType: 'telegram_ingestions',
+      action: 'processing_dispatch_failed',
+      result: 'failure',
+      actor: 'telegram',
+      errorMessage: dispatch.error,
+    });
+    await sendMessage(message.chat.id, '⚠️ I couldn’t start processing right now.\nPlease try again in a moment.', { env });
+    return { handled: true, action: 'content_submission_failed' };
+  }
+
+  await q.updateTelegramIngestion(db, telegramUpdateId, 'dispatched');
+  await logAudit(db, {
+    entityType: 'telegram_ingestions',
+    action: 'processing_started',
+    result: 'success',
+    actor: 'telegram',
+  });
+  await sendMessage(message.chat.id, '✅ Content received.\n\nProcessing has started.\nYou’ll receive the draft here for review.', { env });
+  return { handled: true, action: 'content_submission' };
+}
 
 async function rebuildKeyboard(db, approvalId, chatId, messageId, env = {}) {
   const approval = await q.getApprovalRequest(db, approvalId);
@@ -134,11 +202,15 @@ async function handleReject({ db, env, approvalId, chatId, messageId, callbackId
 export async function handleTelegramUpdate(db, update, env = {}) {
   const callbackQuery = update.callback_query;
   if (!callbackQuery) {
-    // Non-callback messages: reply with a short hint.
-    if (update.message && update.message.chat) {
-      await sendMessage(update.message.chat.id, 'ContentFlow AI is running. Use the dashboard or wait for a review message.', { env });
-    }
-    return { handled: false };
+    const message = update.message;
+    if (!message || !message.chat) return { handled: false };
+    return handleContentSubmission({
+      db,
+      env,
+      update,
+      message,
+      text: submissionText(message),
+    });
   }
 
   const { action, approvalId, platformKey } = parseCallbackData(callbackQuery.data);

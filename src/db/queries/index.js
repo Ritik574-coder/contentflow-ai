@@ -3,6 +3,7 @@ import * as platforms from './platforms.js';
 import * as approval from './approval.js';
 import * as publishing from './publishing.js';
 import * as metrics from './metrics.js';
+import * as ingestion from './ingestion.js';
 
 export const queries = {
   ...content,
@@ -10,6 +11,7 @@ export const queries = {
   ...approval,
   ...publishing,
   ...metrics,
+  ...ingestion,
 };
 
 export function insertNotification(db, { contentId, approvalRequestId, channel = 'telegram', notificationType, payload }) {
