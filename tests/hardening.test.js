@@ -70,21 +70,32 @@ test('dashboard auth rejects wrong token when configured', async () => {
 test('dashboard auth accepts a valid bearer token', async () => {
   const db = createTestDb();
   const summary = await runProcessPipeline(db, 'Authorization should accept the configured bearer token.');
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('', { status: 202, headers: { 'Content-Type': 'application/json' } });
 
-  const res = await callDashboardApproval(db, {
-    token: 'secret-token',
-    env: { DASHBOARD_API_TOKEN: 'secret-token' },
-    contentId: summary.contentId,
-  });
-  assert.equal(res.status, 200);
+  try {
+    const res = await callDashboardApproval(db, {
+      token: 'secret-token',
+      env: {
+        DASHBOARD_API_TOKEN: 'secret-token',
+        GH_REPO_OWNER: 'demo-owner',
+        GH_REPO_NAME: 'demo-repo',
+        GH_DISPATCH_PAT: 'fake-token',
+      },
+      contentId: summary.contentId,
+    });
+    assert.equal(res.status, 200);
 
-  const body = await res.json();
-  assert.equal(body.ok, true);
-  assert.equal(body.approval_id, summary.approvalId);
-  assert.equal(body.dispatch, 'GH_DISPATCH_PAT / GH_REPO_OWNER / GH_REPO_NAME not configured');
+    const body = await res.json();
+    assert.equal(body.ok, true);
+    assert.equal(body.approval_id, summary.approvalId);
+    assert.equal(body.dispatch, 'triggered');
 
-  const approval = await q.getApprovalRequest(db, summary.approvalId);
-  assert.equal(approval.status, 'approved');
+    const approval = await q.getApprovalRequest(db, summary.approvalId);
+    assert.equal(approval.status, 'approved');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('telegram webhook authentication still works', async () => {

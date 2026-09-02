@@ -253,8 +253,15 @@ The DRY_RUN pipeline, Markdown-to-HTML conversion, and AI fallback/validation la
 
 # Phase 7 — COMPLETED (2026-09-02)
 
+## 7.0 CI failure diagnosis and fix
+- Exact CI failure: `Test / test (push)` failed in GitHub Actions after the Phase 7 push, with the first failing case `dashboard auth accepts a valid bearer token`.
+- Root cause: the test asserted a hard-coded dispatch message (`GH_DISPATCH_PAT / GH_REPO_OWNER / GH_REPO_NAME not configured`) even though the environment in CI does not define `GH_DISPATCH_PAT`. The test was thus coupled to a missing environment variable and failed before completion.
+- Fix: make the valid-token test hermetic by mocking the GitHub dispatch fetch and setting explicit test env values (`GH_REPO_OWNER`, `GH_REPO_NAME`, `GH_DISPATCH_PAT`). This preserves Phase 7 behavior without calling the real GitHub API.
+- Node/npm used: Node.js 22.22.2, npm 10.9.7.
+- `DRY_RUN=true` remains in effect.
+
 ## 7.1 Dashboard authentication hardening
-- `site/app.js` now caches the token only in browser storage and sends it as `Authorization: Bearer <token>` instead of URL query parameters.
+- `site/app.js` now keeps the token in browser storage and sends it as `Authorization: Bearer <token>` instead of URL query parameters.
 - `worker/index.js` enforces bearer-token checks for `POST /api/approval` whenever `DASHBOARD_API_TOKEN` is configured, returning HTTP 401 for missing or wrong credentials without echoing the secret.
 - Telegram webhook auth remains unchanged and continues to require the existing `X-Telegram-Bot-Api-Secret-Token` check.
 
@@ -272,10 +279,10 @@ The DRY_RUN pipeline, Markdown-to-HTML conversion, and AI fallback/validation la
 - Added `tests/hardening.test.js` covering bearer auth rejection/acceptance, Telegram auth checks, publishing status outcomes, rejection handling, duplicate approval handling, concurrent dispatch protection, and existing platform idempotency.
 
 ## 7.5 Verification
+- `npm ci --ignore-scripts`: passed
 - `npm test`: passed (51/51 tests)
 - `npm run lint`: passed
 - `DRY_RUN=true` remains in effect for all test and publish flows
-- Exact commit hash: e923c9f
-- Push status: success (git push origin main completed)
+- Exact Phase 7 commit hash: 71ee4ebb5e0e427d0af7146430230b36394cb6a4
+- Push status: successful after the CI fix
 - Remaining issues: none blocking Phase 7 completion
-
