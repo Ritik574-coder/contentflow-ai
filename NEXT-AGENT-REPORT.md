@@ -324,7 +324,7 @@ The DRY_RUN pipeline, Markdown-to-HTML conversion, and AI fallback/validation la
 - `npm run lint`: passed.
 - `DRY_RUN=true`.
 - Commit: `1eb692e`.
-- Push: pending final verification.
+- Push: successful to `origin/main`.
 
 ## 8.7 Remaining gaps and recommended next phase
 - Dashboard content creation remains P1 and should use the same authenticated ingestion path rather than a second processing implementation.
