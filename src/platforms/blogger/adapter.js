@@ -1,6 +1,7 @@
 import { ok, err, unsupported } from '../../shared/result.js';
 import { httpJson } from '../../shared/http.js';
 import { resolveSecret, syncValidateContent } from '../adapter-utils.js';
+import { markdownToHtml } from '../../shared/markdown.js';
 
 // Blogger (Google Blogger API v3). OAuth 2.0 with offline access ("In
 // production" consent screen). Publish via posts.insert; comments via
@@ -48,6 +49,8 @@ export class BloggerAdapter {
     const blogId = this._blogId();
     if (!blogId) return err('BLOGGER_BLOG_ID is not set', false);
 
+    const htmlContent = markdownToHtml(version.body);
+
     const res = await httpJson(
       `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts`,
       {
@@ -56,7 +59,7 @@ export class BloggerAdapter {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${tokenRes.data}`,
         },
-        body: { kind: 'blogger#post', title: version.title, content: version.body, status: 'DRAFT' },
+        body: { kind: 'blogger#post', title: version.title, content: htmlContent, status: 'DRAFT' },
         fetchImpl: opts.fetchImpl,
       },
     );
@@ -71,6 +74,8 @@ export class BloggerAdapter {
     const blogId = this._blogId();
     if (!blogId) return err('BLOGGER_BLOG_ID is not set', false);
 
+    const htmlContent = markdownToHtml(version.body);
+
     const res = await httpJson(
       `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts`,
       {
@@ -79,7 +84,7 @@ export class BloggerAdapter {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${tokenRes.data}`,
         },
-        body: { kind: 'blogger#post', title: version.title, content: version.body },
+        body: { kind: 'blogger#post', title: version.title, content: htmlContent },
         fetchImpl: opts.fetchImpl,
       },
     );

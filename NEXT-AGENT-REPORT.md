@@ -1,6 +1,6 @@
 # ContentFlow AI — Next Agent Handoff Report
 
-**Last updated:** 2026-09-01 (Phase 4 — Verification and production credential preparation)  
+**Last updated:** 2026-09-02 (Phase 5 — Blogger Markdown to HTML Conversion)  
 **Repo:** https://github.com/Ritik574-coder/contentflow-ai  
 **Dashboard:** https://ritik574-coder.github.io/contentflow-ai/  
 **Worker API:** https://contentflow-ai.ritik574-coder.workers.dev
@@ -11,18 +11,36 @@
 
 | Area | Status |
 |---|---|
-| Application code (MVP) | ~98% — implemented |
-| Automated tests | 14/14 passing |
+| Application code (MVP) | ~99% — implemented |
+| Automated tests | 25/25 passing (11 new tests added) |
+| Markdown → HTML for Blogger | Fully converted & sanitized with `marked` + `sanitize-html` |
 | GitHub Pages dashboard | Live |
 | Cloudflare D1 | Live, migrations 001–008 applied |
 | Cloudflare Worker | Live |
 | Permanent Cloudflare API token | Configured in GitHub |
 | Telegram Bot + webhook | Configured and verified (Phase 3) |
 | Full DRY_RUN E2E (Telegram path) | Verified (Phase 3) |
-| Phase 4 baseline re-verification | Completed this session |
-| Phase 4 DRY_RUN smoke (Actions path) | Completed this session |
-| Real platform publishing | Not enabled — owner credentials required |
-| Production readiness | ~90% |
+| Phase 4 baseline re-verification | Completed |
+| Phase 5 Markdown to HTML Fix | Completed & verified (all 25 tests pass) |
+| Real platform publishing | Controlled test previously verified; DRY_RUN returned to TRUE |
+| Production readiness | ~95% |
+
+---
+
+# Phase 5 — COMPLETED (2026-09-02)
+
+## 5.1 Blogger Markdown to HTML Conversion
+- **Problem addressed:** Real Blogger test post published raw Markdown syntax (e.g. `# Heading`, `**bold**`, `[link](url)`) instead of formatted HTML.
+- **Root cause:** Blogger API v3 `posts.insert` expects an HTML string in `content`, but the adapter was passing the raw Markdown `version.body`.
+- **Solution:** 
+  - Added lightweight, secure dependencies `marked` and `sanitize-html`.
+  - Implemented `src/shared/markdown.js` with `markdownToHtml()` utility featuring XSS sanitization (disallowing dangerous tags like `<script>`, `<iframe>`, `onerror`, `javascript:` URI schemes).
+  - Updated `src/platforms/blogger/adapter.js` to convert `version.body` to sanitized HTML in `createDraft()` and `publish()`.
+- **Verification:** 
+  - Added unit test suite `tests/markdown.test.js` covering headings, bold/italic, lists, links, images, blockquotes, code blocks, tables, multiline paragraphs, and XSS attack vectors.
+  - Added BloggerAdapter unit tests in `tests/adapters.test.js` validating the HTML conversion in HTTP request payloads.
+  - Full test suite: 25/25 tests passing.
+  - `DRY_RUN` remains `true`.
 
 ---
 
@@ -158,7 +176,7 @@ Do NOT set `DRY_RUN=false` until:
 # Verification Baseline
 
 ```bash
-npm test                                    # expect 14/14
+npm test                                    # expect 25/25 pass
 curl -s https://contentflow-ai.ritik574-coder.workers.dev/api/health
 npx wrangler secret list
 npx wrangler d1 execute contentflow-ai --remote --command "SELECT id, status FROM content ORDER BY id DESC LIMIT 5;"
@@ -173,11 +191,12 @@ node scripts/check-setup.js                 # with secrets exported locally
 
 Do NOT rebuild the project. Do NOT redesign the architecture.
 
-1. Confirm owner has added platform credential(s) — if not, stop and wait
-2. Run `node scripts/check-setup.js` with secrets exported
-3. Run DRY_RUN publish test per configured platform
-4. Only after owner approval: set `DRY_RUN=false` and verify one real publish
-5. Update this report with results
+1. Ensure `DRY_RUN=true` remains the default unless owner explicitly requests a live publish.
+2. Confirm owner has added platform credential(s) (Blogger/DEV.to/LinkedIn) — if not, stop and wait.
+3. Run `node scripts/check-setup.js` with secrets exported.
+4. Run DRY_RUN publish test per configured platform (`npm test` + `scripts/publish.js` in DRY_RUN).
+5. Only after owner approval: perform a controlled real publish (`DRY_RUN=false`) and verify the live post HTML formatting on Blogger.
+6. Return `DRY_RUN=true` immediately after the test and update this report with results.
 
 ---
 
@@ -185,18 +204,19 @@ Do NOT rebuild the project. Do NOT redesign the architecture.
 
 This project is developed by multiple AI agents. Treat the repository and this handoff report as the existing project state. **Never rebuild completed functionality from scratch.**
 
-The DRY_RUN pipeline is fully verified. The next milestone is **real platform credentials → single-platform live publish**.
+The DRY_RUN pipeline and Markdown-to-HTML conversion are fully verified.
 
 ---
 
-# Files changed in Phase 4
+# Files changed in Phase 5
 
 | File | Change |
 |---|---|
-| `scripts/check-setup.js` | Enhanced readiness reporting |
-| `docs/DEPLOYMENT.md` | Synced with live state + owner checklist |
-| `PROGRESS.md` | Updated completion status |
-| `README.md` | Workflow table + status pointer |
-| `NEXT-AGENT-REPORT.md` | This file |
+| `package.json` | Added `marked` and `sanitize-html` dependencies |
+| `src/shared/markdown.js` | Created `markdownToHtml` converter with XSS sanitization |
+| `src/platforms/blogger/adapter.js` | Converted Markdown to HTML in `createDraft()` and `publish()` |
+| `tests/markdown.test.js` | Added unit test suite for Markdown to HTML conversion & XSS prevention |
+| `tests/adapters.test.js` | Added BloggerAdapter tests verifying HTML conversion on draft & publish |
+| `NEXT-AGENT-REPORT.md` | Updated handoff report with Phase 5 completion and status |
 
-**Database changes:** Phase 4 smoke added content ID 11, approval ID 5, platform_post ID 4. No schema migrations.
+**Database changes:** None. No schema migrations needed.
